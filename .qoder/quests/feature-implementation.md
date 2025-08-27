@@ -1265,7 +1265,226 @@ class ForbiddenMoveDetector {
 }
 ```
 
-### 1. Minimax算法实现
+### 6. 渲染引擎 (CanvasRenderer.js)
+
+```javascript
+/**
+ * Canvas渲染引擎
+ */
+class CanvasRenderer {
+    constructor(canvasId, board) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.board = board;
+        
+        this.cellSize = 36;
+        this.padding = 30;
+        this.boardWidth = (Utils.CONSTANTS.BOARD_SIZE - 1) * this.cellSize;
+        this.boardHeight = (Utils.CONSTANTS.BOARD_SIZE - 1) * this.cellSize;
+        
+        this.canvas.width = this.boardWidth + this.padding * 2;
+        this.canvas.height = this.boardHeight + this.padding * 2;
+        
+        this.hoverPosition = null;
+        this.winLine = null;
+        this.hintPosition = null;
+        this.animationSystem = new AnimationSystem(this);
+    }
+    
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.drawBackground();
+        this.drawGrid();
+        this.drawStarPoints();
+        this.drawPieces();
+        this.drawHover();
+        this.drawWinLine();
+        this.drawHint();
+    }
+    
+    drawBackground() {
+        this.ctx.fillStyle = '#f4e4bc';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+    
+    drawGrid() {
+        this.ctx.strokeStyle = '#654321';
+        this.ctx.lineWidth = 1;
+        
+        for (let i = 0; i < Utils.CONSTANTS.BOARD_SIZE; i++) {
+            const x = this.padding + i * this.cellSize;
+            const y = this.padding + i * this.cellSize;
+            
+            // 垂直线
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, this.padding);
+            this.ctx.lineTo(x, this.padding + this.boardHeight);
+            this.ctx.stroke();
+            
+            // 水平线
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.padding, y);
+            this.ctx.lineTo(this.padding + this.boardWidth, y);
+            this.ctx.stroke();
+        }
+    }
+    
+    drawStarPoints() {
+        const starPoints = [[3,3], [3,11], [11,3], [11,11], [7,7]];
+        this.ctx.fillStyle = '#654321';
+        
+        starPoints.forEach(([x, y]) => {
+            const screenPos = Utils.boardToScreen(x, y, this.cellSize, this.padding);
+            this.ctx.beginPath();
+            this.ctx.arc(screenPos.x, screenPos.y, 3, 0, 2 * Math.PI);
+            this.ctx.fill();
+        });
+    }
+    
+    drawPieces() {
+        for (let x = 0; x < Utils.CONSTANTS.BOARD_SIZE; x++) {
+            for (let y = 0; y < Utils.CONSTANTS.BOARD_SIZE; y++) {
+                const piece = this.board.getPiece(x, y);
+                if (piece !== Utils.CONSTANTS.EMPTY) {
+                    this.drawPiece(x, y, piece);
+                }
+            }
+        }
+    }
+    
+    drawPiece(x, y, piece, opacity = 1) {
+        const screenPos = Utils.boardToScreen(x, y, this.cellSize, this.padding);
+        const radius = this.cellSize * 0.4;
+        
+        this.ctx.save();
+        this.ctx.globalAlpha = opacity;
+        
+        if (piece === Utils.CONSTANTS.BLACK) {
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.strokeStyle = '#34495e';
+        } else {
+            this.ctx.fillStyle = '#ecf0f1';
+            this.ctx.strokeStyle = '#bdc3c7';
+        }
+        
+        this.ctx.beginPath();
+        this.ctx.arc(screenPos.x, screenPos.y, radius, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+    }
+    
+    drawHover() {
+        if (this.hoverPosition) {
+            this.drawPiece(
+                this.hoverPosition.x, 
+                this.hoverPosition.y, 
+                this.hoverPosition.player, 
+                0.5
+            );
+        }
+    }
+    
+    setHoverPosition(x, y, player) {
+        this.hoverPosition = { x, y, player };
+        this.render();
+    }
+    
+    clearHover() {
+        this.hoverPosition = null;
+        this.render();
+    }
+    
+    showWinLine(winLine) {
+        this.winLine = winLine;
+        this.render();
+    }
+    
+    drawWinLine() {
+        if (!this.winLine || this.winLine.length < 2) return;
+        
+        this.ctx.strokeStyle = '#e74c3c';
+        this.ctx.lineWidth = 4;
+        
+        const start = Utils.boardToScreen(
+            this.winLine[0].x, 
+            this.winLine[0].y, 
+            this.cellSize, 
+            this.padding
+        );
+        const end = Utils.boardToScreen(
+            this.winLine[this.winLine.length - 1].x, 
+            this.winLine[this.winLine.length - 1].y, 
+            this.cellSize, 
+            this.padding
+        );
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(start.x, start.y);
+        this.ctx.lineTo(end.x, end.y);
+        this.ctx.stroke();
+    }
+}
+
+/**
+ * 动画系统
+ */
+class AnimationSystem {
+    constructor(renderer) {
+        this.renderer = renderer;
+        this.animations = new Map();
+        this.isAnimating = false;
+    }
+    
+    createDropAnimation(x, y, piece) {
+        return {
+            type: 'DROP',
+            startTime: Date.now(),
+            duration: 300,
+            x, y, piece,
+            easing: this.easeOutBounce
+        };
+    }
+    
+    easeOutBounce(t) {
+        if (t < 1/2.75) {
+            return 7.5625 * t * t;
+        } else if (t < 2/2.75) {
+            return 7.5625 * (t -= 1.5/2.75) * t + 0.75;
+        } else if (t < 2.5/2.75) {
+            return 7.5625 * (t -= 2.25/2.75) * t + 0.9375;
+        } else {
+            return 7.5625 * (t -= 2.625/2.75) * t + 0.984375;
+        }
+    }
+}
+```
+
+## 实例化和初始化代码
+
+```javascript
+// 全局初始化代码 (main.js)
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // 初始化游戏管理器
+        window.gameManager = new GameManager();
+        
+        console.log('WebGoFive-H5-Qoder 初始化完成');
+        
+        // 设置全局错误处理
+        window.addEventListener('error', (event) => {
+            console.error('全局错误:', event.error);
+        });
+        
+    } catch (error) {
+        console.error('初始化失败:', error);
+        alert('游戏初始化失败，请刷新页面重试');
+    }
+});
+```
 
 #### 1.1 基础Minimax结构
 ```javascript
@@ -1785,3 +2004,244 @@ npm run deploy  # 部署到服务器
 - **版本迭代**: 功能更新的版本管理
 - **向后兼容**: 存档格式的兼容性保证
 - **渐进增强**: 新功能的渐进式推出
+
+## 完整代码实现参考
+
+### AI引擎实现 (AIEngine.js)
+
+```javascript
+/**
+ * AI引擎 - 五子棋人工智能
+ */
+class AIEngine {
+    constructor(difficulty = Utils.CONSTANTS.AI_DIFFICULTY.NORMAL) {
+        this.difficulty = difficulty;
+        this.config = this.getDifficultyConfig(difficulty);
+        this.evaluator = new PositionEvaluator();
+        this.transpositionTable = new Map();
+        this.searchStats = { nodesSearched: 0, cutoffs: 0, cacheHits: 0 };
+    }
+    
+    getDifficultyConfig(difficulty) {
+        const configs = {
+            [Utils.CONSTANTS.AI_DIFFICULTY.BEGINNER]: { depth: 2, timeLimit: 500, randomFactor: 0.3 },
+            [Utils.CONSTANTS.AI_DIFFICULTY.NORMAL]: { depth: 4, timeLimit: 1500, randomFactor: 0.1 },
+            [Utils.CONSTANTS.AI_DIFFICULTY.HARD]: { depth: 6, timeLimit: 2500, randomFactor: 0.05 },
+            [Utils.CONSTANTS.AI_DIFFICULTY.HELL]: { depth: 8, timeLimit: 3000, randomFactor: 0.01 }
+        };
+        return configs[difficulty];
+    }
+    
+    async getBestMove(board, player) {
+        const startTime = Date.now();
+        this.resetSearchStats();
+        
+        try {
+            const result = await this.iterativeDeepening(board, player);
+            const thinkingTime = Date.now() - startTime;
+            
+            return { x: result.x, y: result.y, score: result.score, thinkingTime, stats: this.searchStats };
+        } catch (error) {
+            console.error('AI计算错误:', error);
+            return this.getRandomMove(board);
+        }
+    }
+    
+    minimax(board, depth, alpha, beta, isMaximizing, player) {
+        this.searchStats.nodesSearched++;
+        
+        if (depth === 0) {
+            return { score: this.evaluator.evaluate(board, player), move: null };
+        }
+        
+        const moves = this.generateMoves(board);
+        let bestMove = null;
+        let bestScore = isMaximizing ? -Infinity : Infinity;
+        
+        for (let move of moves) {
+            const newBoard = board.clone();
+            newBoard.placePiece(move.x, move.y, isMaximizing ? player : Utils.getOpponent(player));
+            
+            const result = this.minimax(newBoard, depth - 1, alpha, beta, !isMaximizing, player);
+            
+            if (isMaximizing) {
+                if (result.score > bestScore) {
+                    bestScore = result.score;
+                    bestMove = move;
+                }
+                alpha = Math.max(alpha, result.score);
+            } else {
+                if (result.score < bestScore) {
+                    bestScore = result.score;
+                    bestMove = move;
+                }
+                beta = Math.min(beta, result.score);
+            }
+            
+            if (beta <= alpha) {
+                this.searchStats.cutoffs++;
+                break;
+            }
+        }
+        
+        return { score: bestScore, move: bestMove };
+    }
+    
+    resetSearchStats() {
+        this.searchStats = { nodesSearched: 0, cutoffs: 0, cacheHits: 0 };
+    }
+}
+
+class PositionEvaluator {
+    evaluate(board, player) {
+        let score = 0;
+        
+        for (let x = 0; x < Utils.CONSTANTS.BOARD_SIZE; x++) {
+            for (let y = 0; y < Utils.CONSTANTS.BOARD_SIZE; y++) {
+                if (board.getPiece(x, y) === player) {
+                    score += this.evaluatePosition(board, x, y, player);
+                } else if (board.getPiece(x, y) === Utils.getOpponent(player)) {
+                    score -= this.evaluatePosition(board, x, y, Utils.getOpponent(player));
+                }
+            }
+        }
+        
+        return score;
+    }
+    
+    evaluatePosition(board, x, y, player) {
+        let score = 0;
+        const centerDistance = Utils.distance(x, y, 7, 7);
+        score += Math.max(0, 10 - centerDistance);
+        
+        for (let direction of Utils.CONSTANTS.DIRECTIONS) {
+            score += this.evaluateDirection(board, x, y, player, direction);
+        }
+        
+        return score;
+    }
+    
+    evaluateDirection(board, x, y, player, direction) {
+        const [dx, dy] = direction;
+        let count = 1, blocked = 0;
+        
+        // 正方向计数
+        let nx = x + dx, ny = y + dy;
+        while (Utils.isValidPosition(nx, ny)) {
+            if (board.getPiece(nx, ny) === player) {
+                count++; nx += dx; ny += dy;
+            } else {
+                if (board.getPiece(nx, ny) !== Utils.CONSTANTS.EMPTY) blocked++;
+                break;
+            }
+        }
+        
+        // 反方向计数
+        nx = x - dx; ny = y - dy;
+        while (Utils.isValidPosition(nx, ny)) {
+            if (board.getPiece(nx, ny) === player) {
+                count++; nx -= dx; ny -= dy;
+            } else {
+                if (board.getPiece(nx, ny) !== Utils.CONSTANTS.EMPTY) blocked++;
+                break;
+            }
+        }
+        
+        return this.getPatternScore(count, blocked);
+    }
+    
+    getPatternScore(count, blocked) {
+        if (count >= 5) return 100000;
+        if (count === 4 && blocked === 0) return 10000;
+        if (count === 4 && blocked === 1) return 1000;
+        if (count === 3 && blocked === 0) return 1000;
+        if (count === 3 && blocked === 1) return 100;
+        if (count === 2 && blocked === 0) return 100;
+        return count * 10;
+    }
+}
+```
+
+### 事件系统实现 (EventBus.js)
+
+```javascript
+class GameEventBus {
+    constructor() {
+        this.listeners = new Map();
+        this.eventQueue = [];
+        this.maxQueueSize = 100;
+    }
+    
+    on(eventType, callback) {
+        if (!this.listeners.has(eventType)) {
+            this.listeners.set(eventType, []);
+        }
+        this.listeners.get(eventType).push(callback);
+        return () => this.off(eventType, callback);
+    }
+    
+    emit(eventType, data) {
+        const event = { type: eventType, data, timestamp: Date.now(), id: Utils.generateId() };
+        
+        this.addToQueue(event);
+        
+        if (this.listeners.has(eventType)) {
+            this.listeners.get(eventType).forEach(callback => {
+                try {
+                    callback(event);
+                } catch (error) {
+                    console.error(`事件处理器错误 (${eventType}):`, error);
+                }
+            });
+        }
+    }
+    
+    clear() {
+        this.listeners.clear();
+        this.eventQueue = [];
+    }
+}
+```
+
+### 全局初始化代码 (main.js)
+
+```javascript
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        console.log('WebGoFive-H5-Qoder 正在初始化...');
+        
+        // 初始化游戏管理器
+        window.gameManager = new GameManager();
+        
+        // 设置全局错误处理
+        window.addEventListener('error', (event) => {
+            console.error('全局错误:', event.error);
+        });
+        
+        console.log('WebGoFive-H5-Qoder 初始化完成');
+        
+        // 显示欢迎消息
+        if (window.gameManager) {
+            window.gameManager.showMessage('欢迎来到H5五子棋！点击"新游戏"开始', 'info', 5000);
+        }
+        
+    } catch (error) {
+        console.error('初始化失败:', error);
+        alert('游戏初始化失败，请刷新页面重试');
+    }
+});
+```
+
+## 开发指导
+
+### 开发优先级
+1. **P0 (必须实现)**: Utils, Board, RuleEngine, CanvasRenderer, GameManager基础功能
+2. **P1 (重要功能)**: AIEngine基础实现, 错误处理, 事件系统
+3. **P2 (增强功能)**: 高级AI算法, 存档回放, 动画效果
+4. **P3 (未来功能)**: 教学模式, 残局练习, 在线对战
+
+### 实现建议
+- 严格按照模块化设计实现，确保各模块职责清晰
+- 优先实现核心游戏逻辑，后续添加UI交互和高级功能
+- 重视错误处理和用户体验，确保游戏稳定运行
+- 充分测试各个模块的功能，特别是AI算法和规则引擎
