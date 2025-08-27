@@ -1,0 +1,169 @@
+# H5五子棋项目 - Git忽略文件
+
+# ======================
+# 操作系统生成的文件
+# ======================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Linux
+*~
+.nfs*
+
+# ======================
+# 编辑器和IDE
+# ======================
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# WebStorm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ======================
+# 构建和依赖文件
+# ======================
+# Node.js (如果后续使用)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+
+# 构建输出
+dist/
+build/
+*.min.js
+*.min.css
+
+# ======================
+# 临时文件和缓存
+# ======================
+# 临时文件
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# 日志文件
+*.log
+logs/
+
+# 测试覆盖率报告
+coverage/
+.nyc_output/
+
+# ======================
+# 安全敏感文件
+# ======================
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 密钥和证书
+*.key
+*.pem
+*.crt
+*.cert
+secrets/
+
+# 配置文件（包含敏感信息）
+config/production.json
+config/secrets.json
+
+# ======================
+# 项目特定文件
+# ======================
+# 游戏数据文件（用户生成）
+saves/
+userdata/
+*.save
+*.dat
+
+# 性能测试结果
+benchmark/
+performance-reports/
+
+# 截图和录屏（测试用）
+screenshots/
+recordings/
+*.png
+*.jpg
+*.gif
+*.mp4
+
+# 压缩文件
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# ======================
+# 备份文件
+# ======================
+*.bak
+*.backup
+*.old
+*-backup.*
+*-old.*
+
+# ======================
+# 文档生成文件
+# ======================
+# 如果使用文档生成工具
+docs/generated/
+*.pdf
+
+# ======================
+# 部署相关
+# ======================
+# 部署脚本的本地配置
+deploy.local.sh
+deploy.config.local.json
+
+# FTP/SFTP配置
+.ftpconfig
+.sftpconfig
+
+# ======================
+# 其他
+# ======================
+# 软链接
+*.lnk
+
+# 调试文件
+debug/
+*.debug
+
+# 本地测试文件
+test-local/
+*.test.local.*

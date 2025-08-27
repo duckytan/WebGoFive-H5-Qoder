@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="H5五子棋 - 支持双人对战和人机对战的在线五子棋游戏">
+    <meta name="keywords" content="五子棋,H5游戏,在线游戏,双人对战,人机对战">
+    <title>H5五子棋 - 经典策略棋类游戏</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <!-- 游戏主容器 -->
+    <div id="app" class="app">
+        <!-- 游戏标题栏 -->
+        <header class="game-header">
+            <div class="header-content">
+                <h1 class="game-title">
+                    <span class="title-icon">🏁</span>
+                    H5五子棋
+                </h1>
+                <div class="header-controls">
+                    <button type="button" class="btn btn--icon" id="hint-btn" aria-label="获取提示" title="获取提示 (H)">
+                        <span class="icon">💡</span>
+                    </button>
+                    <button type="button" class="btn btn--icon" id="settings-btn" aria-label="设置" title="设置">
+                        <span class="icon">⚙️</span>
+                    </button>
+                    <button type="button" class="btn btn--icon" id="help-btn" aria-label="帮助" title="规则说明">
+                        <span class="icon">❓</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主游戏界面 -->
+        <main class="game-main">
+            <!-- 游戏信息面板 -->
+            <aside class="game-info-panel">
+                <!-- 当前玩家信息 -->
+                <div class="player-info">
+                    <h3 class="section-title">当前玩家</h3>
+                    <div class="current-player" id="current-player">
+                        <div class="player-indicator">
+                            <div class="piece piece--black" id="player-piece"></div>
+                            <span class="player-name" id="player-name">黑棋先手</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 游戏状态 -->
+                <div class="game-status">
+                    <h3 class="section-title">游戏状态</h3>
+                    <div class="status-content">
+                        <div class="status-item">
+                            <span class="status-label">模式:</span>
+                            <span class="status-value" id="game-mode">双人对战</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">回合:</span>
+                            <span class="status-value" id="move-count">第1回合</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">用时:</span>
+                            <span class="status-value" id="game-time">00:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 游戏控制按钮 -->
+                <div class="game-controls">
+                    <h3 class="section-title">游戏控制</h3>
+                    <div class="control-buttons">
+                        <button type="button" class="btn btn--primary" id="new-game-btn">
+                            <span class="icon">🎮</span>
+                            新游戏
+                        </button>
+                        <button type="button" class="btn btn--secondary" id="undo-btn" disabled>
+                            <span class="icon">↩️</span>
+                            悔棋
+                        </button>
+                        <button type="button" class="btn btn--secondary" id="mode-toggle-btn">
+                            <span class="icon">🔄</span>
+                            <span id="mode-toggle-text">切换到PvE</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 棋局管理按钮 -->
+                    <div class="control-buttons">
+                        <h4 class="control-section-title">棋局管理</h4>
+                        <button type="button" class="btn btn--secondary" id="save-game-btn" disabled>
+                            <span class="icon">💾</span>
+                            保存棋局
+                        </button>
+                        <button type="button" class="btn btn--secondary" id="load-game-btn">
+                            <span class="icon">📁</span>
+                            加载棋局
+                        </button>
+                        <button type="button" class="btn btn--secondary" id="replay-btn" disabled>
+                            <span class="icon">⏯️</span>
+                            棋局回放
+                        </button>
+                    </div>
+                    
+                    <!-- 隐藏的文件输入 -->
+                    <input type="file" id="load-game-input" accept=".json" style="display: none;">
+                </div>
+
+                <!-- AI相关控制 (PvE模式时显示) -->
+                <div class="ai-controls" id="ai-controls" style="display: none;">
+                    <h3 class="section-title">AI设置</h3>
+                    <div class="ai-settings">
+                        <div class="setting-item">
+                            <label for="ai-difficulty">难度级别:</label>
+                            <select id="ai-difficulty" class="select">
+                                <option value="BEGINNER">新手</option>
+                                <option value="NORMAL" selected>正常</option>
+                                <option value="HARD">困难</option>
+                                <option value="HELL">地狱</option>
+                            </select>
+                        </div>
+                        <div class="ai-thinking" id="ai-thinking" style="display: none;">
+                            <div class="thinking-indicator">
+                                <span class="thinking-dots">AI思考中</span>
+                                <div class="loading-dots">
+                                    <span></span><span></span><span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 棋盘区域 -->
+            <section class="game-board-section">
+                <div class="board-container">
+                    <!-- 棋盘背景装饰 -->
+                    <div class="board-decoration">
+                        <div class="board-shadow"></div>
+                    </div>
+                    
+                    <!-- 棋盘Canvas -->
+                    <canvas 
+                        id="game-canvas" 
+                        width="600" 
+                        height="600"
+                        class="game-canvas"
+                        aria-label="五子棋棋盘 - 15x15网格"
+                        role="grid"
+                        tabindex="0">
+                        您的浏览器不支持Canvas，请升级到现代浏览器
+                    </canvas>
+
+                    <!-- 棋盘坐标标识 -->
+                    <div class="board-coordinates" id="board-coordinates" style="display: none;">
+                        <!-- 字母坐标 (A-O) -->
+                        <div class="coord-letters">
+                            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
+                            <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
+                            <span>K</span><span>L</span><span>M</span><span>N</span><span>O</span>
+                        </div>
+                        <!-- 数字坐标 (1-15) -->
+                        <div class="coord-numbers">
+                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                            <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                            <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 游戏提示信息 -->
+                <div class="game-hints" id="game-hints">
+                    <div class="hint-message" id="hint-message" role="status" aria-live="polite">
+                        点击棋盘开始游戏
+                    </div>
+                </div>
+                
+                <!-- 回放控制器（音乐播放器风格） -->
+                <div class="replay-player" id="replay-player" style="display: none;">
+                    <div class="player-container">
+                        <!-- 回放信息显示 -->
+                        <div class="player-info">
+                            <div class="game-title" id="replay-game-title">棋局回放</div>
+                            <div class="game-details">
+                                <span class="current-step" id="replay-step-info">第0步 / 共0步</span>
+                                <span class="current-player" id="replay-player-info">游戏开始</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 进度条 -->
+                        <div class="player-progress">
+                            <span class="time-current" id="replay-time-current">00:00</span>
+                            <div class="progress-container">
+                                <input type="range" id="replay-progress-slider" class="progress-slider" min="0" max="100" value="0">
+                                <div class="progress-track">
+                                    <div class="progress-fill" id="replay-progress-fill"></div>
+                                </div>
+                            </div>
+                            <span class="time-total" id="replay-time-total">00:00</span>
+                        </div>
+                        
+                        <!-- 控制按钮组 -->
+                        <div class="player-controls">
+                            <!-- 主要控制按钮 -->
+                            <div class="main-controls">
+                                <button type="button" class="control-btn" id="replay-first" title="回到开始">
+                                    <span class="icon">⏮</span>
+                                </button>
+                                <button type="button" class="control-btn" id="replay-prev" title="上一步">
+                                    <span class="icon">⏪</span>
+                                </button>
+                                <button type="button" class="control-btn play-btn" id="replay-play-pause" title="播放/暂停">
+                                    <span class="icon" id="replay-play-icon">▶️</span>
+                                </button>
+                                <button type="button" class="control-btn" id="replay-next" title="下一步">
+                                    <span class="icon">⏩</span>
+                                </button>
+                                <button type="button" class="control-btn" id="replay-last" title="跳到最后">
+                                    <span class="icon">⏭</span>
+                                </button>
+                            </div>
+                            
+                            <!-- 辅助控制 -->
+                            <div class="aux-controls">
+                                <!-- 速度控制 -->
+                                <div class="speed-control">
+                                    <span class="control-label">速度</span>
+                                    <div class="speed-options">
+                                        <button type="button" class="speed-btn" data-speed="0.5">0.5x</button>
+                                        <button type="button" class="speed-btn active" data-speed="1">1x</button>
+                                        <button type="button" class="speed-btn" data-speed="2">2x</button>
+                                        <button type="button" class="speed-btn" data-speed="3">3x</button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 功能按钮 -->
+                                <div class="function-controls">
+                                    <button type="button" class="function-btn" id="replay-steps-toggle" title="显示步骤列表">
+                                        <span class="icon">📝</span>
+                                    </button>
+                                    <button type="button" class="function-btn" id="replay-export" title="导出棋局">
+                                        <span class="icon">💾</span>
+                                    </button>
+                                    <button type="button" class="function-btn" id="replay-close" title="关闭回放">
+                                        <span class="icon">✖️</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 步骤列表（可折叠） -->
+                    <div class="steps-panel" id="replay-steps-panel" style="display: none;">
+                        <div class="steps-header">
+                            <h4>棋局步骤</h4>
+                            <button type="button" class="close-steps" id="close-steps-panel">&times;</button>
+                        </div>
+                        <div class="steps-list" id="replay-steps-container">
+                            <!-- 动态生成步骤列表 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+    </div>
+
+    <!-- 弹窗模态框容器 -->
+    <div id="modal-container" class="modal-container">
+        <!-- 游戏结果弹窗 -->
+        <div id="game-result-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="result-title">游戏结束</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="result-content">
+                        <div class="result-icon" id="result-icon">🎉</div>
+                        <div class="result-message" id="result-message">恭喜获胜！</div>
+                        <div class="result-stats" id="result-stats">
+                            <div class="result-stat">
+                                <span class="stat-label">用时:</span>
+                                <span class="stat-value" id="final-time">05:32</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="stat-label">回合:</span>
+                                <span class="stat-value" id="final-moves">25回合</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--primary" id="play-again-btn">
+                        <span class="icon">🎮</span>
+                        再来一局
+                    </button>
+                    <button type="button" class="btn btn--secondary" id="close-result-btn">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设置弹窗 -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">游戏设置</h2>
+                    <button type="button" class="modal-close" id="close-settings-btn" aria-label="关闭">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-content">
+                        <!-- 游戏设置 -->
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">游戏设置</h3>
+                            <div class="setting-item">
+                                <label for="default-mode">默认模式:</label>
+                                <select id="default-mode" class="select">
+                                    <option value="PvP">双人对战</option>
+                                    <option value="PvE">人机对战</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="default-difficulty">默认AI难度:</label>
+                                <select id="default-difficulty" class="select">
+                                    <option value="BEGINNER">新手</option>
+                                    <option value="NORMAL" selected>正常</option>
+                                    <option value="HARD">困难</option>
+                                    <option value="HELL">地狱</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 界面设置 -->
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">界面设置</h3>
+                            <div class="setting-item">
+                                <label for="board-theme">棋盘主题:</label>
+                                <select id="board-theme" class="select">
+                                    <option value="classic" selected>经典木质</option>
+                                    <option value="modern">现代简约</option>
+                                    <option value="dark">暗黑主题</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sound-effects" checked>
+                                    <span class="checkmark"></span>
+                                    音效开关
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="animations" checked>
+                                    <span class="checkmark"></span>
+                                    动画效果
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 辅助功能设置 -->
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">智能辅助</h3>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="risk-indicator-toggle" checked>
+                                    <span class="checkmark"></span>
+                                    风险提示
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="coordinate-display-toggle">
+                                    <span class="checkmark"></span>
+                                    坐标显示
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="auto-save" checked>
+                                    <span class="checkmark"></span>
+                                    自动保存
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="forbidden-hints" checked>
+                                    <span class="checkmark"></span>
+                                    禁手提示
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label for="hint-cooldown">提示冷却时间:</label>
+                                <select id="hint-cooldown" class="select">
+                                    <option value="1000">1秒</option>
+                                    <option value="3000" selected>3秒</option>
+                                    <option value="5000">5秒</option>
+                                    <option value="10000">10秒</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--primary" id="save-settings-btn">
+                        保存设置
+                    </button>
+                    <button type="button" class="btn btn--secondary" id="reset-settings-btn">
+                        恢复默认
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 帮助/规则说明弹窗 -->
+        <div id="help-modal" class="modal">
+            <div class="modal-content modal-content--large">
+                <div class="modal-header">
+                    <h2 class="modal-title">五子棋规则说明</h2>
+                    <button type="button" class="modal-close" id="close-help-btn" aria-label="关闭">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="help-content">
+                        <!-- 基础规则 -->
+                        <div class="help-section">
+                            <h3 class="help-section-title">基础规则</h3>
+                            <div class="rule-list">
+                                <div class="rule-item">
+                                    <span class="rule-icon">🎯</span>
+                                    <div class="rule-content">
+                                        <strong>获胜条件:</strong> 横、竖、斜任一方向连成五子者获胜
+                                    </div>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-icon">🏁</span>
+                                    <div class="rule-content">
+                                        <strong>先手规则:</strong> 黑棋先手，白棋后手，轮流落子
+                                    </div>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-icon">📏</span>
+                                    <div class="rule-content">
+                                        <strong>棋盘规格:</strong> 15×15线交叉棋盘，共225个落子点
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 禁手规则 -->
+                        <div class="help-section">
+                            <h3 class="help-section-title">禁手规则 (仅限黑棋)</h3>
+                            <div class="rule-list">
+                                <div class="rule-item forbidden">
+                                    <span class="rule-icon">❌</span>
+                                    <div class="rule-content">
+                                        <strong>三三禁手:</strong> 一步棋同时形成两个活三
+                                    </div>
+                                </div>
+                                <div class="rule-item forbidden">
+                                    <span class="rule-icon">❌</span>
+                                    <div class="rule-content">
+                                        <strong>四四禁手:</strong> 一步棋同时形成两个四（活四/冲四）
+                                    </div>
+                                </div>
+                                <div class="rule-item forbidden">
+                                    <span class="rule-icon">❌</span>
+                                    <div class="rule-content">
+                                        <strong>长连禁手:</strong> 一步棋形成六子或以上连线
+                                    </div>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-icon">⚠️</span>
+                                    <div class="rule-content">
+                                        <strong>重要:</strong> 五连获胜优先于禁手判定
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 操作指南 -->
+                        <div class="help-section">
+                            <h3 class="help-section-title">操作指南</h3>
+                            <div class="rule-list">
+                                <div class="rule-item">
+                                    <span class="rule-icon">🖱️</span>
+                                    <div class="rule-content">
+                                        <strong>落子:</strong> 鼠标点击棋盘交叉点
+                                    </div>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-icon">📱</span>
+                                    <div class="rule-content">
+                                        <strong>移动设备:</strong> 触摸屏幕进行落子
+                                    </div>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-icon">⌨️</span>
+                                    <div class="rule-content">
+                                        <strong>快捷键:</strong> H键获取提示，Ctrl+Z悔棋，Ctrl+N新游戏
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI难度说明 -->
+                        <div class="help-section">
+                            <h3 class="help-section-title">AI难度等级</h3>
+                            <div class="difficulty-list">
+                                <div class="difficulty-item difficulty--beginner">
+                                    <div class="difficulty-name">新手级别</div>
+                                    <div class="difficulty-desc">适合刚接触五子棋的玩家，AI会犯一些简单错误</div>
+                                </div>
+                                <div class="difficulty-item difficulty--normal">
+                                    <div class="difficulty-name">正常级别</div>
+                                    <div class="difficulty-desc">有一定挑战性，适合有经验的玩家</div>
+                                </div>
+                                <div class="difficulty-item difficulty--hard">
+                                    <div class="difficulty-name">困难级别</div>
+                                    <div class="difficulty-desc">高级策略，适合五子棋高手</div>
+                                </div>
+                                <div class="difficulty-item difficulty--hell">
+                                    <div class="difficulty-name">地狱级别</div>
+                                    <div class="difficulty-desc">接近完美的计算，极强挑战</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--primary" id="start-tutorial-btn">
+                        开始教程
+                    </button>
+                    <button type="button" class="btn btn--secondary" id="close-help-footer-btn">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 键盘快捷键提示 -->
+    <div id="keyboard-shortcuts" class="keyboard-shortcuts" style="display: none;">
+        <div class="shortcuts-content">
+            <h4>快捷键</h4>
+            <div class="shortcut-list">
+                <div class="shortcut-item">
+                    <kbd>H</kbd> <span>获取提示</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>Z</kbd> <span>悔棋</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Ctrl</kbd> + <kbd>N</kbd> <span>新游戏</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Esc</kbd> <span>关闭弹窗</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript演示脚本 -->
+    <script src="js/board-renderer.js"></script>
+    <script src="js/game-save-load.js"></script>
+    <script src="js/game-replay.js"></script>
+    <script src="js/demo.js"></script>
+</body>
+</html>
