@@ -8,6 +8,12 @@ class GameReplay {
         this.playSpeed = 1; // 播放速度倍数
         this.playInterval = null;
         this.stepDuration = 1000; // 每步间隔时间(ms)
+        this.replayEngine = window.GomokuGame ? new window.GomokuGame() : null;
+        this.originalGameData = null;
+        
+        if (this.replayEngine) {
+            this.replayEngine.reset();
+        }
         
         this.setupEventListeners();
     }
@@ -90,11 +96,18 @@ class GameReplay {
      */
     startReplay() {
         try {
+            // 保存当前游戏状态
+            if (window.game) {
+                this.originalGameData = window.game.exportData();
+                console.log('GameReplay: 已保存原始棋局状态');
+            }
+            
             // 获取当前棋局数据
             this.replayData = this.getReplayData();
             
-            if (!this.replayData || this.replayData.moves.length === 0) {
+            if (!this.replayData || !this.replayData.moves || this.replayData.moves.length === 0) {
                 this.showMessage('没有可回放的棋局', 'warning');
+                this.originalGameData = null;
                 return;
             }
             
@@ -122,16 +135,30 @@ class GameReplay {
      * 获取回放数据
      */
     getReplayData() {
-        // 这里需要与实际的游戏引擎集成
-        // 目前返回模拟数据
+        // 从游戏核心引擎获取真实数据
+        if (!window.game) {
+            console.warn('GameReplay: window.game 未初始化');
+            return null;
+        }
+        
+        const gameInfo = window.game.getGameInfo();
+        const moves = window.game.getMoves();
+        
+        if (!moves || moves.length === 0) {
+            console.warn('GameReplay: 没有可回放的棋局');
+            return null;
+        }
+        
         return {
             gameInfo: {
-                mode: 'PvP',
-                startTime: new Date().toISOString(),
-                endTime: new Date().toISOString()
+                mode: gameInfo.gameMode,
+                startTime: gameInfo.startTime ? new Date(gameInfo.startTime).toISOString() : null,
+                endTime: gameInfo.endTime ? new Date(gameInfo.endTime).toISOString() : null,
+                winner: gameInfo.winner,
+                duration: gameInfo.duration
             },
-            moves: this.generateMockMoves(),
-            boardState: Array(15).fill().map(() => Array(15).fill(0)),
+            moves: moves,
+            boardState: window.game.getBoardState(),
             settings: {}
         };
     }
@@ -192,7 +219,7 @@ class GameReplay {
         
         // 显示游戏提示
         if (gameHints) {
-            gameHints.style.display = 'block';
+            gameHints.style.display = 'flex';
         }
         
         // 隐藏步骤面板
@@ -231,8 +258,14 @@ class GameReplay {
      * 重置棋盘到初始状态
      */
     resetBoardForReplay() {
+        if (this.replayEngine) {
+            this.replayEngine.reset();
+        }
+        
         if (window.boardRenderer) {
-            window.boardRenderer.clearBoard();
+            const boardState = this.replayEngine ? this.replayEngine.getBoardState() : Array(15).fill().map(() => Array(15).fill(0));
+            window.boardRenderer.board = boardState;
+            window.boardRenderer.render();
         }
         console.log('棋盘已重置为回放模式');
     }
@@ -354,24 +387,29 @@ class GameReplay {
         // 清空棋盘
         this.resetBoardForReplay();
         
-        // 重放到目标步骤
-        for (let i = 0; i < targetStep && i < this.replayData.moves.length; i++) {
-            const move = this.replayData.moves[i];
-            this.placePieceForReplay(move.x, move.y, move.player, i + 1);
+        // 使用回放专用引擎逐步重放
+        if (this.replayEngine && window.boardRenderer) {
+            this.replayEngine.reset();
+            
+            for (let i = 0; i < targetStep && i < this.replayData.moves.length; i++) {
+                const move = this.replayData.moves[i];
+                this.replayEngine.placePiece(move.x, move.y);
+                console.log(`回放第${i + 1}步: ${move.player === 1 ? '黑棋' : '白棋'} 落子 (${move.x}, ${move.y})`);
+            }
+            
+            // 同步渲染器
+            window.boardRenderer.board = this.replayEngine.getBoardState();
+            window.boardRenderer.render();
+        } else {
+            console.warn('GameReplay: replayEngine 或 boardRenderer 未初始化');
         }
     }
     
     /**
-     * 在回放中放置棋子
+     * 在回放中放置棋子（已废弃，使用 game-core）
      */
     placePieceForReplay(x, y, player, step) {
-        // 这里需要与实际的渲染引擎集成
-        console.log(`第${step}步: ${player === 1 ? '黑棋' : '白棋'} 落子 (${x}, ${y})`);
-        
-        // 如果有棋盘渲染器，调用其方法
-        if (window.boardRenderer && window.boardRenderer.drawPiece) {
-            window.boardRenderer.drawPiece(x, y, player);
-        }
+        console.warn('placePieceForReplay 已废弃，通过 rebuildBoardToStep 统一处理');
     }
     
     /**
@@ -603,8 +641,24 @@ class GameReplay {
      * 恢复原始状态
      */
     restoreOriginalState() {
-        // 这里需要恢复到回放前的游戏状态
-        console.log('恢复到回放前的状态');
+        // 恢复回放前的棋局状态
+        if (this.originalGameData && window.game) {
+            window.game.loadFromData(this.originalGameData);
+            
+            if (window.boardRenderer) {
+                window.boardRenderer.board = window.game.getBoardState();
+                window.boardRenderer.render();
+            }
+            
+            if (window.demo) {
+                window.demo.updateGameStatus();
+            }
+            
+            console.log('GameReplay: 已恢复原始棋局状态');
+            this.originalGameData = null;
+        } else {
+            console.log('GameReplay: 无需恢复（无原始状态）');
+        }
     }
     
     /**

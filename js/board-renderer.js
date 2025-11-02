@@ -43,7 +43,14 @@ class SimpleBoardRenderer {
         console.log('画布尺寸设置完成:', this.canvas.width, 'x', this.canvas.height);
         
         // 棋盘状态 - 0:空位, 1:黑棋, 2:白棋
-        this.board = Array(15).fill().map(() => Array(15).fill(0));
+        // 如果游戏核心已加载，同步其状态；否则使用空棋盘
+        if (window.game) {
+            this.board = window.game.getBoardState();
+            console.log('已从游戏核心同步棋盘状态');
+        } else {
+            this.board = Array(15).fill().map(() => Array(15).fill(0));
+            console.log('游戏核心未加载，使用空棋盘');
+        }
         
         // 绑定点击事件
         this.setupEventListeners();
@@ -105,21 +112,66 @@ class SimpleBoardRenderer {
     }
     
     placePiece(x, y) {
-        // 简单的轮流下棋逻辑
-        const currentPlayer = this.getCurrentPlayer();
-        this.board[y][x] = currentPlayer;
-        
-        // 触发演示脚本的移动事件（如果存在）
-        if (window.demo && window.demo.handleCanvasClick) {
-            window.demo.handleCanvasClick({ target: this.canvas });
+        // 调用游戏核心引擎的落子方法
+        if (!window.game) {
+            console.error('[BoardRenderer] 游戏核心引擎未加载');
+            return;
         }
         
-        this.render();
-        console.log(`玩家${currentPlayer}在(${x}, ${y})落子`);
+        const result = window.game.placePiece(x, y);
+        
+        if (result.success) {
+            // 同步棋盘状态
+            this.board = window.game.getBoardState();
+            this.render();
+            
+            console.log(`[BoardRenderer] 落子成功: (${x}, ${y})`);
+            
+            // 通知界面层更新状态
+            if (window.demo && window.demo.handleMoveResult) {
+                window.demo.handleMoveResult({
+                    x,
+                    y,
+                    player: window.game.currentPlayer === 1 ? 2 : 1, // 落子前的玩家
+                    result
+                });
+            }
+            
+            // 处理游戏结束
+            if (result.gameOver) {
+                this.handleGameOver(result);
+            }
+        } else {
+            console.warn(`[BoardRenderer] 落子失败: ${result.error}`);
+        }
+    }
+    
+    /**
+     * 处理游戏结束事件
+     */
+    handleGameOver(result) {
+        console.log('[BoardRenderer] 游戏结束', result);
+        
+        // 通知demo显示游戏结果
+        if (window.demo && window.demo.showGameResult) {
+            setTimeout(() => {
+                if (result.winner === 1) {
+                    window.demo.showGameResult('win');
+                } else if (result.winner === 2) {
+                    window.demo.showGameResult('lose');
+                } else {
+                    window.demo.showGameResult('draw');
+                }
+            }, 300);
+        }
     }
     
     getCurrentPlayer() {
-        // 计算当前应该下的棋子颜色
+        if (window.game) {
+            return window.game.currentPlayer || 1;
+        }
+        
+        // 兼容逻辑：根据当前棋盘推断
         let pieceCount = 0;
         for (let i = 0; i < this.boardSize; i++) {
             for (let j = 0; j < this.boardSize; j++) {
@@ -297,13 +349,22 @@ class SimpleBoardRenderer {
     
     // 清空棋盘
     clearBoard() {
-        this.board = Array(15).fill().map(() => Array(15).fill(0));
+        if (window.game) {
+            window.game.reset();
+            this.board = window.game.getBoardState();
+        } else {
+            this.board = Array(15).fill().map(() => Array(15).fill(0));
+        }
+        
         this.render();
         console.log('棋盘已清空');
     }
     
     // 获取棋盘状态
     getBoardState() {
+        if (window.game) {
+            return window.game.getBoardState();
+        }
         return this.board.map(row => [...row]);
     }
 }
