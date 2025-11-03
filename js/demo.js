@@ -3,7 +3,7 @@
 class InterfaceDemo {
     constructor() {
         this.currentPlayer = 1; // 1为黑棋，2为白棋
-        this.gameMode = 'PvP'; // PvP或PvE
+        this.gameMode = 'PvE'; // PvP或PvE
         this.moveCount = 0;
         this.gameTime = 0;
         this.timeInterval = null;
@@ -41,6 +41,14 @@ class InterfaceDemo {
                 loadingScreen.classList.add('hidden');
             }
         }, 1000);
+        
+        // 设置初始游戏模式
+        if (window.game) {
+            window.game.setGameMode(this.gameMode);
+        }
+        
+        // 更新初始UI状态
+        this.updateModeDisplay();
         
         // 演示风险提示功能
         this.demoRiskIndicator();
@@ -188,6 +196,9 @@ class InterfaceDemo {
         if (window.game) {
             window.game.setAIDifficulty(difficulty);
             this.updateHintMessage(`AI难度已设置为: ${this.getDifficultyLabel(difficulty)}`);
+            if (this.gameMode === 'PvE') {
+                this.updateGameStatus();
+            }
             console.log(`[Demo] AI难度设置为: ${difficulty}`);
         }
     }
@@ -458,22 +469,24 @@ class InterfaceDemo {
             window.game.setGameMode(this.gameMode);
         }
         
+        this.updateModeDisplay();
+        this.updateHintMessage(`已切换到${this.gameMode === 'PvP' ? '双人对战' : '人机对战'}模式`);
+        console.log(`[Demo] 切换到${this.gameMode}模式`);
+    }
+    
+    updateModeDisplay() {
         const modeToggleText = document.getElementById('mode-toggle-text');
-        const gameModeDisplay = document.getElementById('game-mode');
         const aiControls = document.getElementById('ai-controls');
         
         if (this.gameMode === 'PvE') {
             if (modeToggleText) modeToggleText.textContent = '切换到PvP';
-            if (gameModeDisplay) gameModeDisplay.textContent = '人机对战';
             if (aiControls) aiControls.style.display = 'block';
         } else {
             if (modeToggleText) modeToggleText.textContent = '切换到PvE';
-            if (gameModeDisplay) gameModeDisplay.textContent = '双人对战';
             if (aiControls) aiControls.style.display = 'none';
         }
         
-        this.updateHintMessage(`已切换到${this.gameMode === 'PvP' ? '双人对战' : '人机对战'}模式`);
-        console.log(`切换到${this.gameMode}模式`);
+        this.updateGameStatus();
     }
     
     showHint() {
@@ -848,6 +861,7 @@ class InterfaceDemo {
         const playerPiece = document.getElementById('player-piece');
         const playerName = document.getElementById('player-name');
         const moveCountDisplay = document.getElementById('move-count');
+        const gameModeDisplay = document.getElementById('game-mode');
         
         if (playerPiece) {
             playerPiece.className = `piece piece--${this.currentPlayer === 1 ? 'black' : 'white'}`;
@@ -859,6 +873,16 @@ class InterfaceDemo {
         
         if (moveCountDisplay) {
             moveCountDisplay.textContent = `第${this.moveCount + 1}回合`;
+        }
+        
+        if (gameModeDisplay) {
+            if (this.gameMode === 'PvE') {
+                const difficulty = window.game?.aiDifficulty || 'NORMAL';
+                const difficultyLabel = this.getDifficultyLabel(difficulty);
+                gameModeDisplay.textContent = `人机对战 (${difficultyLabel})`;
+            } else {
+                gameModeDisplay.textContent = '双人对战';
+            }
         }
     }
     
