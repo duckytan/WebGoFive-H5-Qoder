@@ -6,6 +6,10 @@ class GameSaveLoad {
         this.autoSaveInterval = null;
         
         this.setupEventListeners();
+        
+        if (this.autoSaveEnabled) {
+            this.startAutoSave();
+        }
     }
     
     setupEventListeners() {
@@ -152,76 +156,93 @@ class GameSaveLoad {
      * 获取当前游戏数据
      */
     getCurrentGameData() {
-        // 这里需要与实际的游戏引擎集成
-        // 目前返回模拟数据
-        const mockData = {
-            version: '1.0.0',
+        if (!window.game) {
+            console.warn('GameSaveLoad: 无法获取游戏数据，window.game 未初始化');
+            return null;
+        }
+        
+        const exportData = window.game.exportData();
+        const gameInfo = window.game.getGameInfo();
+        
+        const gameData = {
+            version: exportData.version,
             gameInfo: {
-                mode: 'PvP', // 或 'PvE'
-                difficulty: 'NORMAL',
-                startTime: new Date().toISOString(),
-                endTime: null,
-                result: null // 'black_win', 'white_win', 'draw', null
+                mode: gameInfo.gameMode,
+                difficulty: gameInfo.aiDifficulty,
+                startTime: gameInfo.startTime ? new Date(gameInfo.startTime).toISOString() : new Date().toISOString(),
+                endTime: gameInfo.endTime ? new Date(gameInfo.endTime).toISOString() : null,
+                result: gameInfo.winner === 1 ? 'black_win'
+                        : gameInfo.winner === 2 ? 'white_win'
+                        : gameInfo.winner === 0 ? 'draw'
+                        : null
             },
-            boardState: this.getCurrentBoardState(),
-            moves: this.getCurrentMoves(),
-            currentPlayer: this.getCurrentPlayer(),
-            moveCount: this.getMoveCount(),
-            gameTime: this.getGameTime(),
-            settings: this.getGameSettings()
+            boardState: exportData.boardState,
+            moves: exportData.moves,
+            currentPlayer: gameInfo.currentPlayer,
+            moveCount: gameInfo.moveCount,
+            gameTime: Math.floor(gameInfo.duration / 1000),
+            settings: this.getGameSettings(),
+            timestamp: exportData.timestamp
         };
         
-        this.currentGameData = mockData;
-        return mockData;
+        this.currentGameData = gameData;
+        return gameData;
     }
     
     /**
-     * 获取当前棋盘状态
+     * 获取当前棋盘状态（已废弃，使用 game.exportData）
      */
     getCurrentBoardState() {
-        // 15x15的棋盘状态，0=空，1=黑棋，2=白棋
-        const board = Array(15).fill().map(() => Array(15).fill(0));
-        
-        // 这里需要从实际的游戏引擎获取棋盘状态
-        // 目前返回模拟数据
-        return board;
+        if (window.game) {
+            return window.game.getBoardState();
+        }
+        return Array(15).fill().map(() => Array(15).fill(0));
     }
     
     /**
-     * 获取当前移动记录
+     * 获取当前移动记录（已废弃，使用 game.exportData）
      */
     getCurrentMoves() {
-        // 这里需要从实际的游戏引擎获取移动记录
-        // 返回格式: [{x: 7, y: 7, player: 1, timestamp: '...'}, ...]
+        if (window.game) {
+            return window.game.getMoves();
+        }
         return [];
     }
     
     /**
-     * 获取当前玩家
+     * 获取当前玩家（已废弃，使用 game.exportData）
      */
     getCurrentPlayer() {
-        // 从界面获取当前玩家信息
+        if (window.game) {
+            return window.game.currentPlayer;
+        }
         const playerPiece = document.getElementById('player-piece');
         return playerPiece && playerPiece.classList.contains('piece--black') ? 1 : 2;
     }
     
     /**
-     * 获取移动计数
+     * 获取移动计数（已废弃，使用 game.getGameInfo）
      */
     getMoveCount() {
+        if (window.game) {
+            return window.game.getGameInfo().moveCount;
+        }
         const moveCountElement = document.getElementById('move-count');
         if (moveCountElement) {
             const text = moveCountElement.textContent;
-            const match = text.match(/第(\\d+)回合/);
+            const match = text.match(/第(\d+)回合/);
             return match ? parseInt(match[1]) - 1 : 0;
         }
         return 0;
     }
     
     /**
-     * 获取游戏时间
+     * 获取游戏时间（已废弃，使用 game.getGameInfo）
      */
     getGameTime() {
+        if (window.game) {
+            return Math.floor(window.game.getGameInfo().duration / 1000);
+        }
         const gameTimeElement = document.getElementById('game-time');
         if (gameTimeElement) {
             const timeText = gameTimeElement.textContent;
@@ -287,12 +308,15 @@ class GameSaveLoad {
      * 重置游戏状态
      */
     resetGame() {
-        // 清空棋盘
-        if (window.boardRenderer) {
-            window.boardRenderer.clearBoard();
+        if (window.game) {
+            window.game.reset();
         }
         
-        // 重置UI状态
+        if (window.boardRenderer) {
+            window.boardRenderer.board = window.game ? window.game.getBoardState() : window.boardRenderer.getBoardState();
+            window.boardRenderer.render();
+        }
+        
         const undoBtn = document.getElementById('undo-btn');
         if (undoBtn) {
             undoBtn.disabled = true;
@@ -306,22 +330,40 @@ class GameSaveLoad {
      */
     restoreGameState(gameData) {
         try {
-            // 恢复棋盘状态
-            this.restoreBoardState(gameData.boardState, gameData.moves);
+            if (!window.game) {
+                throw new Error('GameSaveLoad: window.game 未初始化');
+            }
             
-            // 恢复游戏信息
-            this.restoreGameInfo(gameData);
+            // 通过核心引擎恢复状态
+            window.game.reset();
+            const success = window.game.loadFromData(gameData);
+            if (!success) {
+                throw new Error('GameSaveLoad: loadFromData 返回失败');
+            }
+            
+            // 同步渲染器
+            if (window.boardRenderer) {
+                window.boardRenderer.board = window.game.getBoardState();
+                window.boardRenderer.render();
+            }
             
             // 恢复设置
             if (gameData.settings) {
                 this.restoreSettings(gameData.settings);
             }
             
-            // 启用相关按钮
+            // 更新界面状态
+            this.restoreUI(gameData);
+            
+            // 启用按钮
+            const undoBtn = document.getElementById('undo-btn');
             const saveBtn = document.getElementById('save-game-btn');
             const replayBtn = document.getElementById('replay-btn');
+            if (undoBtn) undoBtn.disabled = window.game.getGameInfo().moveCount === 0;
             if (saveBtn) saveBtn.disabled = false;
             if (replayBtn) replayBtn.disabled = false;
+            
+            console.log(`GameSaveLoad: 已恢复 ${gameData.moves?.length || 0} 步棋局`);
             
         } catch (error) {
             console.error('恢复游戏状态失败:', error);
@@ -330,57 +372,75 @@ class GameSaveLoad {
     }
     
     /**
-     * 恢复棋盘状态
+     * 同步 UI 状态
      */
-    restoreBoardState(boardState, moves) {
-        // 这里需要与实际的游戏引擎集成
-        // 逐步重放所有移动来恢复棋盘状态
-        if (moves && moves.length > 0) {
-            console.log(`恢复${moves.length}步棋局`);
-            // 实际实现中需要调用游戏引擎的方法来重放移动
-        }
-    }
-    
-    /**
-     * 恢复游戏信息
-     */
-    restoreGameInfo(gameData) {
-        // 恢复游戏模式
-        if (gameData.gameInfo.mode) {
-            // 设置游戏模式显示
-            const gameModeElement = document.getElementById('game-mode');
-            if (gameModeElement) {
-                gameModeElement.textContent = gameData.gameInfo.mode === 'PvP' ? '双人对战' : '人机对战';
-            }
+    restoreUI(gameData) {
+        if (!window.game) return;
+        const info = window.game.getGameInfo();
+        
+        // 游戏模式显示
+        const gameModeElement = document.getElementById('game-mode');
+        if (gameModeElement) {
+            gameModeElement.textContent = info.gameMode === 'PvP' ? '双人对战' : '人机对战';
         }
         
-        // 恢复移动计数
-        if (gameData.moveCount !== undefined) {
-            const moveCountElement = document.getElementById('move-count');
-            if (moveCountElement) {
-                moveCountElement.textContent = `第${gameData.moveCount + 1}回合`;
-            }
-        }
-        
-        // 恢复当前玩家
-        if (gameData.currentPlayer) {
-            this.updateCurrentPlayer(gameData.currentPlayer);
-        }
-    }
-    
-    /**
-     * 更新当前玩家显示
-     */
-    updateCurrentPlayer(player) {
+        // 当前玩家显示
         const playerPiece = document.getElementById('player-piece');
         const playerName = document.getElementById('player-name');
-        
         if (playerPiece) {
-            playerPiece.className = `piece piece--${player === 1 ? 'black' : 'white'}`;
+            playerPiece.className = `piece piece--${info.currentPlayer === 1 ? 'black' : 'white'}`;
+        }
+        if (playerName) {
+            playerName.textContent = info.currentPlayer === 1 ? '黑棋' : '白棋';
         }
         
-        if (playerName) {
-            playerName.textContent = player === 1 ? '黑棋' : '白棋';
+        // 回合数
+        const moveCountElement = document.getElementById('move-count');
+        if (moveCountElement) {
+            moveCountElement.textContent = `第${info.moveCount + 1}回合`;
+        }
+        
+        // 用时
+        const gameTimeElement = document.getElementById('game-time');
+        if (gameTimeElement) {
+            const seconds = Math.floor(info.duration / 1000);
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            gameTimeElement.textContent = `${mins}:${secs}`;
+        }
+        
+        // 同步 InterfaceDemo 的内部状态
+        if (window.demo) {
+            window.demo.moveCount = info.moveCount;
+            window.demo.currentPlayer = info.currentPlayer;
+            window.demo.gameMode = info.gameMode;
+            window.demo.updateGameStatus();
+            window.demo.updateHintMessage('棋局加载完成');
+        }
+    }
+    
+    /**
+     * 恢复设置
+     */
+    restoreSettings(settings) {
+        if (settings.riskIndicator !== undefined) {
+            const toggle = document.getElementById('risk-indicator-toggle');
+            if (toggle) toggle.checked = settings.riskIndicator;
+        }
+        
+        if (settings.coordinateDisplay !== undefined) {
+            const toggle = document.getElementById('coordinate-display-toggle');
+            if (toggle) toggle.checked = settings.coordinateDisplay;
+        }
+        
+        if (settings.soundEffects !== undefined) {
+            const toggle = document.getElementById('sound-effects');
+            if (toggle) toggle.checked = settings.soundEffects;
+        }
+        
+        if (settings.animations !== undefined) {
+            const toggle = document.getElementById('animations');
+            if (toggle) toggle.checked = settings.animations;
         }
     }
     
@@ -500,9 +560,32 @@ class GameSaveLoad {
             const savedData = localStorage.getItem('gomoku_auto_save');
             if (savedData) {
                 const gameData = JSON.parse(savedData);
-                if (confirm('发现自动保存的棋局，是否恢复？')) {
+                
+                // 验证数据有效性
+                if (!gameData || !gameData.moves || gameData.moves.length === 0) {
+                    localStorage.removeItem('gomoku_auto_save');
+                    return false;
+                }
+                
+                // 显示友好的提示信息
+                const moveCount = gameData.moves.length;
+                const date = new Date(gameData.timestamp || Date.now());
+                const timeStr = date.toLocaleString('zh-CN', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const message = `发现上次未完成的对局（${moveCount}步，${timeStr}），是否继续？`;
+                
+                if (confirm(message)) {
                     this.loadGameFromData(gameData);
+                    this.showMessage('棋局已恢复', 'success');
                     return true;
+                } else {
+                    // 用户选择不恢复，清除自动保存
+                    localStorage.removeItem('gomoku_auto_save');
                 }
             }
         } catch (error) {

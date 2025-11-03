@@ -8,6 +8,18 @@ class InterfaceDemo {
         this.gameTime = 0;
         this.timeInterval = null;
         
+        // 禁手提示配置
+        this.forbiddenPromptConfig = {
+            showMessage: true,
+            highlight: true,
+            highlightDuration: 1800,
+            highlightColor: 'rgba(211, 47, 47, 0.85)',
+            borderColor: '#d32f2f',
+            textColor: '#b71c1c',
+            showLabel: true,
+            logDetail: false
+        };
+        
         // 初始化新功能模块
         this.gameSaveLoad = null;
         this.gameReplay = null;
@@ -162,6 +174,14 @@ class InterfaceDemo {
     
     startNewGame() {
         this.addButtonClickEffect('new-game-btn');
+        
+        // 重置游戏核心
+        if (window.game) {
+            window.game.reset();
+            window.game.setGameMode(this.gameMode);
+        }
+        
+        // 重置本地状态
         this.moveCount = 0;
         this.currentPlayer = 1;
         this.gameTime = 0;
@@ -169,7 +189,7 @@ class InterfaceDemo {
         this.updateGameStatus();
         this.updateHintMessage('新游戏开始！黑棋先手');
         
-        // 重置棋盘
+        // 重置棋盘渲染
         if (window.boardRenderer) {
             window.boardRenderer.clearBoard();
         }
@@ -188,31 +208,168 @@ class InterfaceDemo {
             this.gameSaveLoad.clearAutoSave();
         }
         
-        console.log('开始新游戏');
+        console.log('[Demo] 开始新游戏');
     }
     
     undoMove() {
-        if (this.moveCount > 0) {
-            this.addButtonClickEffect('undo-btn');
-            this.moveCount--;
-            this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
-            this.updateGameStatus();
-            this.updateHintMessage('已悔棋');
+        this.addButtonClickEffect('undo-btn');
+        
+        // 使用游戏核心的悔棋功能
+        if (window.game) {
+            const steps = this.gameMode === 'PvE' ? 2 : 1; // PvE模式悔棋2步
+            const success = window.game.undo(steps);
             
-            if (this.moveCount === 0) {
-                const undoBtn = document.getElementById('undo-btn');
-                if (undoBtn) {
-                    undoBtn.disabled = true;
+            if (success) {
+                // 同步本地状态
+                const gameInfo = window.game.getGameInfo();
+                this.moveCount = gameInfo.moveCount;
+                this.currentPlayer = gameInfo.currentPlayer;
+                
+                // 更新棋盘渲染
+                if (window.boardRenderer) {
+                    window.boardRenderer.board = window.game.getBoardState();
+                    window.boardRenderer.render();
                 }
+                
+                this.updateGameStatus();
+                this.updateHintMessage('已悔棋');
+                
+                // 更新按钮状态
+                if (this.moveCount === 0) {
+                    const undoBtn = document.getElementById('undo-btn');
+                    if (undoBtn) {
+                        undoBtn.disabled = true;
+                    }
+                    
+                    if (this.gameSaveLoad) {
+                        this.gameSaveLoad.clearAutoSave();
+                    }
+                } else if (this.gameSaveLoad && this.gameSaveLoad.autoSaveEnabled) {
+                    // 悔棋后重新保存
+                    this.gameSaveLoad.autoSaveToLocal();
+                }
+                
+                console.log('[Demo] 悔棋成功');
+            } else {
+                this.updateHintMessage('无法悔棋');
+                console.warn('[Demo] 悔棋失败');
             }
-            
-            console.log('悔棋');
         }
+    }
+    
+    /**
+     * 处理落子结果
+     */
+    handleMoveResult(data) {
+        const { x, y, player, result } = data;
+        
+        // 更新本地状态
+        const gameInfo = window.game.getGameInfo();
+        this.moveCount = gameInfo.moveCount;
+        this.currentPlayer = gameInfo.currentPlayer;
+        
+        this.updateGameStatus();
+        
+        // 启用悔棋按钮
+        const undoBtn = document.getElementById('undo-btn');
+        const saveBtn = document.getElementById('save-game-btn');
+        const replayBtn = document.getElementById('replay-btn');
+        
+        if (undoBtn) undoBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
+        if (replayBtn) replayBtn.disabled = false;
+        
+        // 自动保存（每步落子后）
+        if (this.gameSaveLoad && this.gameSaveLoad.autoSaveEnabled) {
+            this.gameSaveLoad.autoSaveToLocal();
+        }
+        
+        // 如果游戏结束，清除自动保存
+        if (result.gameOver && this.gameSaveLoad) {
+            this.gameSaveLoad.clearAutoSave();
+            console.log('[Demo] 游戏结束，已清除自动保存');
+        }
+        
+        // 如果是PvE模式且轮到AI
+        if (!result.gameOver && this.gameMode === 'PvE' && this.currentPlayer === 2) {
+            this.simulateAIThinking();
+        }
+        
+        console.log('[Demo] 落子结果处理完成');
+    }
+    
+    handleForbiddenMove({ x, y, result }) {
+        const config = this.forbiddenPromptConfig || {};
+        const type = (result && result.forbiddenType) || '禁手';
+        const coordinate = this.formatBoardCoordinate(x, y);
+        const directions = this.formatForbiddenDirections(result && result.details);
+        let message = `⚠️ ${type}，黑棋不能在 ${coordinate} 落子`;
+        if (directions) {
+            message += `（方向：${directions}）`;
+        }
+        
+        if (config.showMessage !== false) {
+            this.updateHintMessage(message);
+        }
+        
+        if (config.logDetail) {
+            console.info('[ForbiddenMove]', { coordinate, type, details: result?.details });
+        }
+    }
+    
+    configureForbiddenPrompt(options = {}) {
+        this.forbiddenPromptConfig = Object.assign({}, this.forbiddenPromptConfig, options);
+        if (window.boardRenderer && typeof window.boardRenderer.render === 'function') {
+            window.boardRenderer.render();
+        }
+    }
+    
+    formatForbiddenDirections(details) {
+        if (!details) {
+            return '';
+        }
+        
+        const dirMap = {
+            horizontal: '横向',
+            vertical: '纵向',
+            diag_down: '正斜线',
+            diag_up: '反斜线'
+        };
+        const descriptors = [];
+        const addDirection = (direction, count) => {
+            if (!direction) return;
+            const label = dirMap[direction] || direction;
+            descriptors.push(count && count > 1 ? `${label}×${count}` : label);
+        };
+        
+        if (details.longLine && details.longLine.hasLongLine && Array.isArray(details.longLine.lines)) {
+            details.longLine.lines.forEach(line => addDirection(line.direction));
+        }
+        if (details.openFours && details.openFours.total > 0 && Array.isArray(details.openFours.directions)) {
+            details.openFours.directions.forEach(item => addDirection(item.direction, item.count));
+        }
+        if (details.openThrees && details.openThrees.total > 0 && Array.isArray(details.openThrees.directions)) {
+            details.openThrees.directions.forEach(item => addDirection(item.direction, item.count));
+        }
+        
+        const unique = [...new Set(descriptors)];
+        return unique.join('、');
+    }
+    
+    formatBoardCoordinate(x, y) {
+        const letters = 'ABCDEFGHIJKLMNO';
+        const column = letters[x] || String(x + 1);
+        return `${column}${y + 1}`;
     }
     
     toggleGameMode() {
         this.addButtonClickEffect('mode-toggle-btn');
         this.gameMode = this.gameMode === 'PvP' ? 'PvE' : 'PvP';
+        
+        // 同步到游戏核心
+        if (window.game) {
+            window.game.setGameMode(this.gameMode);
+        }
         
         const modeToggleText = document.getElementById('mode-toggle-text');
         const gameModeDisplay = document.getElementById('game-mode');
@@ -265,37 +422,6 @@ class InterfaceDemo {
         this.addButtonClickEffect('help-btn');
         this.showModal('help-modal');
         console.log('显示帮助');
-    }
-    
-    handleCanvasClick(e) {
-        if (this.gameMode === 'PvE' && this.currentPlayer === 2) {
-            return; // AI回合，不允许点击
-        }
-        
-        this.moveCount++;
-        this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
-        this.updateGameStatus();
-        
-        // 启用相关按钮
-        const undoBtn = document.getElementById('undo-btn');
-        const saveBtn = document.getElementById('save-game-btn');
-        const replayBtn = document.getElementById('replay-btn');
-        
-        if (undoBtn) undoBtn.disabled = false;
-        if (saveBtn) saveBtn.disabled = false;
-        if (replayBtn) replayBtn.disabled = false;
-        
-        // 模拟游戏结束检测
-        if (this.moveCount >= 10) {
-            setTimeout(() => {
-                this.showGameResult(Math.random() > 0.5 ? 'win' : 'lose');
-            }, 500);
-        } else if (this.gameMode === 'PvE' && this.currentPlayer === 2) {
-            // 模拟AI思考
-            this.simulateAIThinking();
-        }
-        
-        console.log(`玩家${this.currentPlayer === 2 ? 1 : 2}落子，回合${this.moveCount}`);
     }
     
     handleCanvasHover(e) {
@@ -363,6 +489,12 @@ class InterfaceDemo {
         const finalTime = document.getElementById('final-time');
         const finalMoves = document.getElementById('final-moves');
         
+        if (window.game) {
+            const info = window.game.getGameInfo();
+            this.gameTime = Math.floor(info.duration / 1000);
+            this.moveCount = info.moveCount;
+        }
+        
         if (result === 'win') {
             if (resultIcon) {
                 resultIcon.textContent = '🎉';
@@ -370,6 +502,13 @@ class InterfaceDemo {
             }
             if (resultTitle) resultTitle.textContent = '恭喜获胜！';
             if (resultMessage) resultMessage.textContent = '您赢得了这局游戏！';
+        } else if (result === 'draw') {
+            if (resultIcon) {
+                resultIcon.textContent = '🤝';
+                resultIcon.className = 'result-icon draw';
+            }
+            if (resultTitle) resultTitle.textContent = '平局';
+            if (resultMessage) resultMessage.textContent = '双方势均力敌，棋局以平局结束';
         } else {
             if (resultIcon) {
                 resultIcon.textContent = '😔';
@@ -445,6 +584,12 @@ class InterfaceDemo {
     }
     
     updateGameStatus() {
+        if (window.game) {
+            const gameInfo = window.game.getGameInfo();
+            this.currentPlayer = gameInfo.currentPlayer;
+            this.moveCount = gameInfo.moveCount;
+        }
+        
         const playerPiece = document.getElementById('player-piece');
         const playerName = document.getElementById('player-name');
         const moveCountDisplay = document.getElementById('move-count');

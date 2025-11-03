@@ -43,7 +43,24 @@ class SimpleBoardRenderer {
         console.log('画布尺寸设置完成:', this.canvas.width, 'x', this.canvas.height);
         
         // 棋盘状态 - 0:空位, 1:黑棋, 2:白棋
-        this.board = Array(15).fill().map(() => Array(15).fill(0));
+        // 如果游戏核心已加载，同步其状态；否则使用空棋盘
+        if (window.game) {
+            this.board = window.game.getBoardState();
+            console.log('已从游戏核心同步棋盘状态');
+        } else {
+            this.board = Array(15).fill().map(() => Array(15).fill(0));
+            console.log('游戏核心未加载，使用空棋盘');
+        }
+        
+        // 禁手提示配置
+        this.forbiddenHintConfig = {
+            highlightDuration: 1800,
+            highlightColor: 'rgba(211, 47, 47, 0.85)',
+            borderColor: '#d32f2f',
+            textColor: '#b71c1c'
+        };
+        this.forbiddenHighlight = null;
+        this.forbiddenHighlightTimer = null;
         
         // 绑定点击事件
         this.setupEventListeners();
@@ -105,21 +122,125 @@ class SimpleBoardRenderer {
     }
     
     placePiece(x, y) {
-        // 简单的轮流下棋逻辑
-        const currentPlayer = this.getCurrentPlayer();
-        this.board[y][x] = currentPlayer;
-        
-        // 触发演示脚本的移动事件（如果存在）
-        if (window.demo && window.demo.handleCanvasClick) {
-            window.demo.handleCanvasClick({ target: this.canvas });
+        // 调用游戏核心引擎的落子方法
+        if (!window.game) {
+            console.error('[BoardRenderer] 游戏核心引擎未加载');
+            return;
         }
         
+        const result = window.game.placePiece(x, y);
+        
+        if (result.success) {
+            // 同步棋盘状态
+            this.board = window.game.getBoardState();
+            this.render();
+            
+            console.log(`[BoardRenderer] 落子成功: (${x}, ${y})`);
+            
+            // 通知界面层更新状态
+            if (window.demo && window.demo.handleMoveResult) {
+                window.demo.handleMoveResult({
+                    x,
+                    y,
+                    player: window.game.currentPlayer === 1 ? 2 : 1, // 落子前的玩家
+                    result
+                });
+            }
+            
+            // 处理游戏结束
+            if (result.gameOver) {
+                this.handleGameOver(result);
+            }
+        } else {
+            console.warn(`[BoardRenderer] 落子失败: ${result.error}`);
+            
+            if (result.code === 'FORBIDDEN_MOVE') {
+                // 高亮禁手位置
+                this.highlightForbiddenPosition(x, y, result);
+                
+                if (window.demo) {
+                    if (window.demo.handleForbiddenMove) {
+                        window.demo.handleForbiddenMove({ x, y, result });
+                    } else if (window.demo.updateHintMessage) {
+                        const forbiddenType = result.forbiddenType || result.error;
+                        window.demo.updateHintMessage(`⚠️ ${forbiddenType}！黑棋不能在此位置落子`);
+                    }
+                }
+            } else {
+                // 显示友好的错误提示
+                if (window.demo && window.demo.updateHintMessage) {
+                    if (result.code === 'POSITION_OCCUPIED') {
+                        window.demo.updateHintMessage('⚠️ 此位置已有棋子');
+                    } else if (result.code === 'GAME_FINISHED') {
+                        window.demo.updateHintMessage('⚠️ 游戏已结束，请开始新游戏');
+                    } else {
+                        window.demo.updateHintMessage(`⚠️ ${result.error}`);
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * 高亮禁手位置
+     */
+    highlightForbiddenPosition(x, y, result) {
+        const promptConfig = (window.demo && window.demo.forbiddenPromptConfig) || {};
+        if (promptConfig.highlight === false) {
+            return;
+        }
+        
+        const highlightDuration = Math.max(300, promptConfig.highlightDuration || this.forbiddenHintConfig.highlightDuration);
+        
+        // 清除之前的高亮
+        if (this.forbiddenHighlightTimer) {
+            clearTimeout(this.forbiddenHighlightTimer);
+        }
+        
+        // 设置新的高亮
+        this.forbiddenHighlight = {
+            x,
+            y,
+            result,
+            timestamp: Date.now()
+        };
+        
+        // 立即渲染
         this.render();
-        console.log(`玩家${currentPlayer}在(${x}, ${y})落子`);
+        
+        // 一段时间后清除高亮
+        this.forbiddenHighlightTimer = setTimeout(() => {
+            this.forbiddenHighlight = null;
+            this.render();
+        }, highlightDuration);
+    }
+    
+    /**
+     * 处理游戏结束事件
+     */
+    handleGameOver(result) {
+        console.log('[BoardRenderer] 游戏结束', result);
+        
+        // 通知demo显示游戏结果
+        if (window.demo && window.demo.showGameResult) {
+            setTimeout(() => {
+                if (result.winner === 1) {
+                    window.demo.showGameResult('win');
+                } else if (result.winner === 2) {
+                    window.demo.showGameResult('lose');
+                } else {
+                    window.demo.showGameResult('draw');
+                }
+            }, 300);
+        }
     }
     
     getCurrentPlayer() {
-        // 计算当前应该下的棋子颜色
+        if (window.game) {
+            return window.game.currentPlayer || 1;
+        }
+        
+        // 兼容逻辑：根据当前棋盘推断
         let pieceCount = 0;
         for (let i = 0; i < this.boardSize; i++) {
             for (let j = 0; j < this.boardSize; j++) {
@@ -152,6 +273,9 @@ class SimpleBoardRenderer {
         
         // 绘制悬停预览
         this.drawHoverPreview();
+        
+        // 绘制禁手高亮
+        this.drawForbiddenHighlight();
         
         console.log('棋盘渲染完成');
     }
@@ -295,15 +419,95 @@ class SimpleBoardRenderer {
         }
     }
     
+    drawForbiddenHighlight() {
+        if (!this.forbiddenHighlight) {
+            return;
+        }
+        
+        const { x, y, result } = this.forbiddenHighlight;
+        const promptConfig = (window.demo && window.demo.forbiddenPromptConfig) || {};
+        const highlightColor = promptConfig.highlightColor || this.forbiddenHintConfig.highlightColor;
+        const borderColor = promptConfig.borderColor || this.forbiddenHintConfig.borderColor;
+        const textColor = promptConfig.textColor || this.forbiddenHintConfig.textColor;
+        const showLabel = promptConfig.showLabel !== false;
+        
+        const screenX = this.padding + x * this.cellSize;
+        const screenY = this.padding + y * this.cellSize;
+        const radius = this.cellSize * 0.45;
+        const crossSize = this.cellSize * 0.28;
+        
+        this.ctx.save();
+        
+        // 背景圆形
+        this.ctx.fillStyle = highlightColor;
+        this.ctx.globalAlpha = 0.2;
+        this.ctx.beginPath();
+        this.ctx.arc(screenX, screenY, radius, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // 边框
+        this.ctx.globalAlpha = 1;
+        this.ctx.strokeStyle = borderColor;
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.arc(screenX, screenY, radius, 0, 2 * Math.PI);
+        this.ctx.stroke();
+        
+        // 交叉标记
+        this.ctx.beginPath();
+        this.ctx.moveTo(screenX - crossSize, screenY - crossSize);
+        this.ctx.lineTo(screenX + crossSize, screenY + crossSize);
+        this.ctx.moveTo(screenX - crossSize, screenY + crossSize);
+        this.ctx.lineTo(screenX + crossSize, screenY - crossSize);
+        this.ctx.stroke();
+        
+        if (showLabel) {
+            // 文本标签
+            const label = (result && result.forbiddenType) ? result.forbiddenType : '禁手';
+            this.ctx.font = '14px "Microsoft YaHei", sans-serif';
+            this.ctx.textBaseline = 'middle';
+            const padding = 6;
+            const textWidth = this.ctx.measureText(label).width;
+            const boxWidth = textWidth + padding * 2;
+            const boxHeight = 24;
+            let rectX = screenX + radius + 8;
+            let rectY = screenY - boxHeight / 2;
+            rectX = Math.min(Math.max(rectX, this.padding), this.canvas.width - boxWidth - this.padding);
+            rectY = Math.min(Math.max(rectY, this.padding), this.canvas.height - boxHeight - this.padding);
+            
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            this.ctx.strokeStyle = borderColor;
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.rect(rectX, rectY, boxWidth, boxHeight);
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            this.ctx.fillStyle = textColor;
+            this.ctx.fillText(label, rectX + padding, rectY + boxHeight / 2);
+        }
+        
+        this.ctx.restore();
+    }
+    
     // 清空棋盘
     clearBoard() {
-        this.board = Array(15).fill().map(() => Array(15).fill(0));
+        if (window.game) {
+            window.game.reset();
+            this.board = window.game.getBoardState();
+        } else {
+            this.board = Array(15).fill().map(() => Array(15).fill(0));
+        }
+        
         this.render();
         console.log('棋盘已清空');
     }
     
     // 获取棋盘状态
     getBoardState() {
+        if (window.game) {
+            return window.game.getBoardState();
+        }
         return this.board.map(row => [...row]);
     }
 }
