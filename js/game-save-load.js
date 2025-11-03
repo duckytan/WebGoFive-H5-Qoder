@@ -47,34 +47,23 @@ class GameSaveLoad {
         try {
             const gameData = this.getCurrentGameData();
             if (!gameData || gameData.moves.length === 0) {
-                this.showMessage('当前没有可保存的棋局', 'warning');
+                GameUtils.showMessage('当前没有可保存的棋局', 'warning');
                 return;
             }
             
             const fileName = this.generateFileName(gameData);
-            const jsonData = JSON.stringify(gameData, null, 2);
             
-            // 创建下载链接
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            
-            // 清理
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            this.showMessage('棋局保存成功', 'success');
-            console.log('棋局已保存:', fileName);
+            // 使用通用工具下载
+            if (GameUtils.downloadAsJSON(gameData, fileName)) {
+                GameUtils.showMessage('棋局保存成功', 'success');
+                console.log('棋局已保存:', fileName);
+            } else {
+                GameUtils.showMessage('保存失败', 'error');
+            }
             
         } catch (error) {
             console.error('保存棋局失败:', error);
-            this.showMessage('保存失败: ' + error.message, 'error');
+            GameUtils.showMessage('保存失败: ' + error.message, 'error');
         }
     }
     
@@ -96,7 +85,7 @@ class GameSaveLoad {
         if (!file) return;
         
         if (!file.name.toLowerCase().endsWith('.json')) {
-            this.showMessage('请选择有效的JSON格式棋局文件', 'error');
+            GameUtils.showMessage('请选择有效的JSON格式棋局文件', 'error');
             return;
         }
         
@@ -107,12 +96,12 @@ class GameSaveLoad {
                 this.loadGameFromData(gameData);
             } catch (error) {
                 console.error('加载棋局失败:', error);
-                this.showMessage('文件格式错误: ' + error.message, 'error');
+                GameUtils.showMessage('文件格式错误: ' + error.message, 'error');
             }
         };
         
         reader.onerror = () => {
-            this.showMessage('文件读取失败', 'error');
+            GameUtils.showMessage('文件读取失败', 'error');
         };
         
         reader.readAsText(file);
@@ -140,7 +129,7 @@ class GameSaveLoad {
             // 恢复棋局数据
             this.restoreGameState(gameData);
             
-            this.showMessage(`棋局加载成功 (${gameData.moves.length}步)`, 'success');
+            GameUtils.showMessage(`棋局加载成功 (${gameData.moves.length}步)`, 'success');
             console.log('棋局已加载:', gameData.gameInfo);
             
             // 启用回放按钮
@@ -148,7 +137,7 @@ class GameSaveLoad {
             
         } catch (error) {
             console.error('加载棋局数据失败:', error);
-            this.showMessage('加载失败: ' + error.message, 'error');
+            GameUtils.showMessage('加载失败: ' + error.message, 'error');
         }
     }
     
@@ -581,7 +570,7 @@ class GameSaveLoad {
                 
                 if (confirm(message)) {
                     this.loadGameFromData(gameData);
-                    this.showMessage('棋局已恢复', 'success');
+                    GameUtils.showMessage('棋局已恢复', 'success');
                     return true;
                 } else {
                     // 用户选择不恢复，清除自动保存
@@ -601,40 +590,6 @@ class GameSaveLoad {
     clearAutoSave() {
         localStorage.removeItem('gomoku_auto_save');
         console.log('自动保存数据已清除');
-    }
-    
-    /**
-     * 显示消息
-     */
-    showMessage(message, type = 'info') {
-        const hintMessage = document.getElementById('hint-message');
-        if (hintMessage) {
-            hintMessage.textContent = message;
-            
-            // 根据类型设置样式
-            hintMessage.className = 'hint-message';
-            if (type === 'error') {
-                hintMessage.style.color = '#d32f2f';
-                hintMessage.style.borderColor = '#d32f2f';
-            } else if (type === 'success') {
-                hintMessage.style.color = '#388e3c';
-                hintMessage.style.borderColor = '#388e3c';
-            } else if (type === 'warning') {
-                hintMessage.style.color = '#f57c00';
-                hintMessage.style.borderColor = '#f57c00';
-            } else {
-                hintMessage.style.color = '';
-                hintMessage.style.borderColor = '';
-            }
-            
-            // 3秒后恢复默认样式
-            setTimeout(() => {
-                hintMessage.style.color = '';
-                hintMessage.style.borderColor = '';
-            }, 3000);
-        }
-        
-        console.log(`[${type.toUpperCase()}] ${message}`);
     }
     
     /**
