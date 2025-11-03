@@ -7,6 +7,8 @@ class InterfaceDemo {
         this.moveCount = 0;
         this.gameTime = 0;
         this.timeInterval = null;
+        this.aiThinking = false;
+        this.aiTimer = null;
         
         // 禁手提示配置
         this.forbiddenPromptConfig = {
@@ -170,10 +172,80 @@ class InterfaceDemo {
                 this.toggleCoordinateDisplay(e.target.checked);
             });
         }
+        
+        // AI难度选择
+        const aiDifficultySelect = document.getElementById('ai-difficulty');
+        if (aiDifficultySelect) {
+            aiDifficultySelect.addEventListener('change', (e) => {
+                this.setAIDifficulty(e.target.value);
+            });
+            this.setAIDifficulty(aiDifficultySelect.value);
+        }
+    }
+    
+    setAIDifficulty(difficulty) {
+        if (window.game) {
+            window.game.setAIDifficulty(difficulty);
+            this.updateHintMessage(`AI难度已设置为: ${this.getDifficultyLabel(difficulty)}`);
+            console.log(`[Demo] AI难度设置为: ${difficulty}`);
+        }
+    }
+    
+    getDifficultyLabel(difficulty) {
+        const labels = {
+            'BEGINNER': '新手',
+            'NORMAL': '正常',
+            'HARD': '困难',
+            'HELL': '地狱'
+        };
+        return labels[difficulty] || difficulty;
+    }
+    
+    getAIThinkingDuration() {
+        const difficulty = window.game?.aiDifficulty || 'NORMAL';
+        const durations = {
+            'BEGINNER': 700,
+            'NORMAL': 1200,
+            'HARD': 1800,
+            'HELL': 2400
+        };
+        return durations[difficulty] || 1200;
+    }
+    
+    finishAIThinking() {
+        this.aiThinking = false;
+        const aiThinking = document.getElementById('ai-thinking');
+        if (aiThinking) {
+            aiThinking.style.display = 'none';
+        }
+    }
+    
+    cancelAIThinking() {
+        if (this.aiTimer) {
+            clearTimeout(this.aiTimer);
+            this.aiTimer = null;
+        }
+        this.finishAIThinking();
+    }
+    
+    canPlacePiece() {
+        if (window.game && window.game.gameStatus === 'finished') {
+            return false;
+        }
+        if (this.gameMode === 'PvE') {
+            if (this.aiThinking) {
+                return false;
+            }
+            if (window.game && window.game.currentPlayer !== 1) {
+                return false;
+            }
+        }
+        return true;
     }
     
     startNewGame() {
         this.addButtonClickEffect('new-game-btn');
+        this.cancelAIThinking();
         
         // 重置游戏核心
         if (window.game) {
@@ -460,25 +532,108 @@ class InterfaceDemo {
     }
     
     simulateAIThinking() {
+        if (this.aiThinking) {
+            console.warn('[Demo] AI正在思考中，请勿重复调用');
+            return;
+        }
+        
+        this.aiThinking = true;
         const aiThinking = document.getElementById('ai-thinking');
         if (aiThinking) {
             aiThinking.style.display = 'block';
         }
         
         this.updateHintMessage('AI思考中...');
+        console.log('[Demo] AI开始思考...');
         
-        // 模拟AI思考时间
-        setTimeout(() => {
+        // 模拟AI思考时间（根据难度调整）
+        const difficulty = window.game?.aiDifficulty || 'NORMAL';
+        const thinkingTime = {
+            'BEGINNER': 800,
+            'NORMAL': 1200,
+            'HARD': 1800,
+            'HELL': 2500
+        }[difficulty] || 1200;
+        
+        this.aiTimer = setTimeout(() => {
+            if (!window.game) {
+                console.error('[Demo] 游戏核心未加载');
+                this.aiThinking = false;
+                if (aiThinking) {
+                    aiThinking.style.display = 'none';
+                }
+                return;
+            }
+            
+            // 获取AI落子位置
+            const aiMove = window.game.getAIMove();
+            
+            if (!aiMove) {
+                console.error('[Demo] AI无法找到有效落子位置');
+                this.aiThinking = false;
+                if (aiThinking) {
+                    aiThinking.style.display = 'none';
+                }
+                this.updateHintMessage('AI无法落子，游戏可能已结束');
+                return;
+            }
+            
+            console.log(`[Demo] AI选择落子位置: (${aiMove.x}, ${aiMove.y})`);
+            
+            // 执行AI落子
+            const result = window.game.placePiece(aiMove.x, aiMove.y);
+            
+            if (result.success) {
+                // 更新棋盘渲染
+                if (window.boardRenderer) {
+                    window.boardRenderer.board = window.game.getBoardState();
+                    window.boardRenderer.render();
+                }
+                
+                // 更新界面状态
+                const gameInfo = window.game.getGameInfo();
+                this.moveCount = gameInfo.moveCount;
+                this.currentPlayer = gameInfo.currentPlayer;
+                this.updateGameStatus();
+                
+                // 启用按钮
+                const undoBtn = document.getElementById('undo-btn');
+                const saveBtn = document.getElementById('save-game-btn');
+                const replayBtn = document.getElementById('replay-btn');
+                
+                if (undoBtn) undoBtn.disabled = false;
+                if (saveBtn) saveBtn.disabled = false;
+                if (replayBtn) replayBtn.disabled = false;
+                
+                // 自动保存
+                if (this.gameSaveLoad && this.gameSaveLoad.autoSaveEnabled) {
+                    this.gameSaveLoad.autoSaveToLocal();
+                }
+                
+                // 处理游戏结束
+                if (result.gameOver) {
+                    if (this.gameSaveLoad) {
+                        this.gameSaveLoad.clearAutoSave();
+                    }
+                    if (window.boardRenderer) {
+                        window.boardRenderer.handleGameOver(result);
+                    }
+                } else {
+                    this.updateHintMessage('AI已落子，轮到您了');
+                }
+                
+                console.log('[Demo] AI落子完成');
+            } else {
+                console.error('[Demo] AI落子失败:', result.error);
+                this.updateHintMessage('AI落子失败');
+            }
+            
+            // 恢复状态
+            this.aiThinking = false;
             if (aiThinking) {
                 aiThinking.style.display = 'none';
             }
-            
-            this.currentPlayer = 1;
-            this.updateGameStatus();
-            this.updateHintMessage('AI已落子，轮到您了');
-            
-            console.log('AI落子完成');
-        }, 1500);
+        }, thinkingTime);
     }
     
     showGameResult(result) {
@@ -495,33 +650,64 @@ class InterfaceDemo {
             this.moveCount = info.moveCount;
         }
         
-        if (result === 'win') {
-            if (resultIcon) {
-                resultIcon.textContent = '🎉';
-                resultIcon.className = 'result-icon winner';
-            }
-            if (resultTitle) resultTitle.textContent = '恭喜获胜！';
-            if (resultMessage) resultMessage.textContent = '您赢得了这局游戏！';
+        // 兼容旧的字符串参数和新的对象参数
+        let winner;
+        if (typeof result === 'object' && result.winner !== undefined) {
+            winner = result.winner;
+        } else if (result === 'win') {
+            winner = 1;
+        } else if (result === 'lose') {
+            winner = 2;
         } else if (result === 'draw') {
+            winner = 0;
+        }
+        
+        // 根据获胜者显示不同的信息
+        if (winner === 0) {
+            // 平局
             if (resultIcon) {
                 resultIcon.textContent = '🤝';
                 resultIcon.className = 'result-icon draw';
             }
             if (resultTitle) resultTitle.textContent = '平局';
             if (resultMessage) resultMessage.textContent = '双方势均力敌，棋局以平局结束';
-        } else {
+        } else if (winner === 1) {
+            // 黑棋获胜
             if (resultIcon) {
-                resultIcon.textContent = '😔';
-                resultIcon.className = 'result-icon loser';
+                resultIcon.textContent = '🎉';
+                resultIcon.className = 'result-icon winner';
             }
-            if (resultTitle) resultTitle.textContent = '游戏结束';
-            if (resultMessage) resultMessage.textContent = '很遗憾，您输了这局';
+            if (resultTitle) resultTitle.textContent = '黑棋获胜！';
+            if (resultMessage) {
+                if (this.gameMode === 'PvE') {
+                    resultMessage.textContent = '恭喜，你赢了！';
+                } else {
+                    resultMessage.textContent = '黑棋五子连珠，赢得了这局游戏！';
+                }
+            }
+        } else if (winner === 2) {
+            // 白棋获胜
+            if (resultIcon) {
+                resultIcon.textContent = this.gameMode === 'PvE' ? '😔' : '🎉';
+                resultIcon.className = this.gameMode === 'PvE' ? 'result-icon loser' : 'result-icon winner';
+            }
+            if (resultTitle) {
+                resultTitle.textContent = this.gameMode === 'PvE' ? 'AI获胜！' : '白棋获胜！';
+            }
+            if (resultMessage) {
+                if (this.gameMode === 'PvE') {
+                    resultMessage.textContent = '很遗憾，AI赢了这局，再接再厉！';
+                } else {
+                    resultMessage.textContent = '白棋五子连珠，赢得了这局游戏！';
+                }
+            }
         }
         
         if (finalTime) finalTime.textContent = this.formatTime(this.gameTime);
         if (finalMoves) finalMoves.textContent = `${this.moveCount}回合`;
         
         this.showModal('game-result-modal');
+        console.log(`[Demo] 显示游戏结果: 获胜者=${winner}`);
     }
     
     playAgain() {
@@ -676,7 +862,7 @@ class InterfaceDemo {
 // 页面加载完成后初始化演示
 document.addEventListener('DOMContentLoaded', () => {
     console.log('五子棋界面演示初始化...');
-    const demo = new InterfaceDemo();
+    window.demo = new InterfaceDemo();
     
     // 演示快捷键提示
     setTimeout(() => {

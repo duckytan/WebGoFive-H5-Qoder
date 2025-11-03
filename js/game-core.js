@@ -376,37 +376,41 @@ class GomokuGame {
     }
     
     /**
-     * 统计单个方向上的活三数量
+     * 统计单个方向是否形成活三
      * @param {string} lineSignature
-     * @returns {number}
+     * @returns {number} 如果存在活三返回1，否则返回0
      */
     countOpenThreesInLine(lineSignature) {
-        const windowSize = 6;
-        let count = 0;
+        if (!lineSignature) {
+            return 0;
+        }
         
-        for (let i = 0; i <= lineSignature.length - windowSize; i++) {
-            const segment = lineSignature.slice(i, i + windowSize);
-            
-            // 外部必须为空位
-            if (segment[0] !== '0' || segment[5] !== '0') {
+        // 边界使用 "3" 标记，需要视为阻断位置
+        const signature = lineSignature.replace(/3/g, '2');
+        const patterns = ['01110', '011010', '010110'];
+        
+        for (const pattern of patterns) {
+            let index = signature.indexOf(pattern);
+            if (index === -1) {
                 continue;
             }
             
-            // 不允许包含对手棋子或边界
-            if (segment.includes('2') || segment.includes('3')) {
-                continue;
-            }
-            
-            const middle = segment.slice(1, 5);
-            const ones = (middle.match(/1/g) || []).length;
-            const zeros = (middle.match(/0/g) || []).length;
-            
-            if (ones === 3 && zeros === 1) {
-                count++;
+            while (index !== -1) {
+                // 确保模式周围不会立即形成更长的连续棋子（避免将活四误判为活三）
+                const left = signature[index - 1];
+                const right = signature[index + pattern.length];
+                const hasLeftExtension = left === '1';
+                const hasRightExtension = right === '1';
+                
+                if (!hasLeftExtension && !hasRightExtension) {
+                    return 1; // 找到合法活三
+                }
+                
+                index = signature.indexOf(pattern, index + 1);
             }
         }
         
-        return count;
+        return 0;
     }
     
     /**
@@ -694,6 +698,274 @@ class GomokuGame {
             moves: this.getMoves(),
             timestamp: Date.now()
         };
+    }
+    
+    /**
+     * AI落子决策
+     * @returns {Object|null} {x, y} 坐标，如果无法落子则返回null
+     */
+    getAIMove() {
+        if (this.gameStatus === 'finished') {
+            console.warn('[GameCore AI] 游戏已结束，无法落子');
+            return null;
+        }
+        
+        console.log(`[GameCore AI] 开始思考，难度: ${this.aiDifficulty}`);
+        
+        // 根据难度选择策略
+        switch (this.aiDifficulty) {
+            case 'BEGINNER':
+                return this.getAIMoveRandom();
+            case 'NORMAL':
+                return this.getAIMoveNormal();
+            case 'HARD':
+                return this.getAIMoveHard();
+            case 'HELL':
+                return this.getAIMoveHell();
+            default:
+                return this.getAIMoveNormal();
+        }
+    }
+    
+    /**
+     * 新手难度AI：随机落子
+     */
+    getAIMoveRandom() {
+        const emptyPositions = [];
+        
+        for (let y = 0; y < 15; y++) {
+            for (let x = 0; x < 15; x++) {
+                if (this.board[y][x] === 0) {
+                    emptyPositions.push({x, y});
+                }
+            }
+        }
+        
+        if (emptyPositions.length === 0) {
+            return null;
+        }
+        
+        // 随机选择一个空位
+        const randomIndex = Math.floor(Math.random() * emptyPositions.length);
+        const move = emptyPositions[randomIndex];
+        
+        console.log(`[GameCore AI-BEGINNER] 随机落子: (${move.x}, ${move.y})`);
+        return move;
+    }
+    
+    /**
+     * 正常难度AI：基础策略
+     */
+    getAIMoveNormal() {
+        const aiPlayer = this.currentPlayer;
+        const opponentPlayer = aiPlayer === 1 ? 2 : 1;
+        
+        // 1. 优先级1：如果能赢，立即获胜
+        const winMove = this.findWinningMove(aiPlayer);
+        if (winMove) {
+            console.log(`[GameCore AI-NORMAL] 找到获胜落点: (${winMove.x}, ${winMove.y})`);
+            return winMove;
+        }
+        
+        // 2. 优先级2：阻止对手获胜
+        const blockMove = this.findWinningMove(opponentPlayer);
+        if (blockMove) {
+            console.log(`[GameCore AI-NORMAL] 阻止对手获胜: (${blockMove.x}, ${blockMove.y})`);
+            return blockMove;
+        }
+        
+        // 3. 优先级3：形成活四
+        const fourMove = this.findFourMove(aiPlayer);
+        if (fourMove) {
+            console.log(`[GameCore AI-NORMAL] 形成活四: (${fourMove.x}, ${fourMove.y})`);
+            return fourMove;
+        }
+        
+        // 4. 优先级4：阻止对手形成活四
+        const blockFourMove = this.findFourMove(opponentPlayer);
+        if (blockFourMove) {
+            console.log(`[GameCore AI-NORMAL] 阻止对手活四: (${blockFourMove.x}, ${blockFourMove.y})`);
+            return blockFourMove;
+        }
+        
+        // 5. 优先级5：形成活三
+        const threeMove = this.findThreeMove(aiPlayer);
+        if (threeMove) {
+            console.log(`[GameCore AI-NORMAL] 形成活三: (${threeMove.x}, ${threeMove.y})`);
+            return threeMove;
+        }
+        
+        // 6. 优先级6：中心区域落子
+        const centerMove = this.findCenterMove();
+        if (centerMove) {
+            console.log(`[GameCore AI-NORMAL] 中心区域落子: (${centerMove.x}, ${centerMove.y})`);
+            return centerMove;
+        }
+        
+        // 7. 兜底：随机落子
+        return this.getAIMoveRandom();
+    }
+    
+    /**
+     * 困难难度AI：更智能的策略
+     */
+    getAIMoveHard() {
+        // 暂时使用正常难度的策略
+        return this.getAIMoveNormal();
+    }
+    
+    /**
+     * 地狱难度AI：最强策略
+     */
+    getAIMoveHell() {
+        // 暂时使用正常难度的策略
+        return this.getAIMoveNormal();
+    }
+    
+    /**
+     * 查找能立即获胜的落点
+     */
+    findWinningMove(player) {
+        for (let y = 0; y < 15; y++) {
+            for (let x = 0; x < 15; x++) {
+                if (this.board[y][x] !== 0) continue;
+                
+                // 临时放置棋子测试
+                this.board[y][x] = player;
+                const winResult = this.checkWin(x, y);
+                this.board[y][x] = 0; // 恢复
+                
+                if (winResult.isWin) {
+                    // 如果是黑棋，还需要检查禁手
+                    if (player === 1) {
+                        const forbiddenResult = this.checkForbidden(x, y);
+                        if (forbiddenResult.isForbidden) {
+                            continue;
+                        }
+                    }
+                    return {x, y};
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 查找能形成活四的落点
+     */
+    findFourMove(player) {
+        for (let y = 0; y < 15; y++) {
+            for (let x = 0; x < 15; x++) {
+                if (this.board[y][x] !== 0) continue;
+                
+                // 临时放置棋子测试
+                this.board[y][x] = player;
+                const line = this.getMaxLine(x, y, player);
+                this.board[y][x] = 0; // 恢复
+                
+                if (line >= 4) {
+                    // 如果是黑棋，检查禁手
+                    if (player === 1) {
+                        const forbiddenResult = this.checkForbidden(x, y);
+                        if (forbiddenResult.isForbidden) {
+                            continue;
+                        }
+                    }
+                    return {x, y};
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 查找能形成活三的落点
+     */
+    findThreeMove(player) {
+        for (let y = 0; y < 15; y++) {
+            for (let x = 0; x < 15; x++) {
+                if (this.board[y][x] !== 0) continue;
+                
+                // 临时放置棋子测试
+                this.board[y][x] = player;
+                const line = this.getMaxLine(x, y, player);
+                this.board[y][x] = 0; // 恢复
+                
+                if (line >= 3) {
+                    // 如果是黑棋，检查禁手
+                    if (player === 1) {
+                        const forbiddenResult = this.checkForbidden(x, y);
+                        if (forbiddenResult.isForbidden) {
+                            continue;
+                        }
+                    }
+                    return {x, y};
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 查找中心区域的落点
+     */
+    findCenterMove() {
+        const center = 7; // 15x15棋盘的中心
+        const radius = 3;
+        
+        // 从中心向外扩展搜索
+        for (let r = 0; r <= radius; r++) {
+            const positions = [];
+            
+            for (let dy = -r; dy <= r; dy++) {
+                for (let dx = -r; dx <= r; dx++) {
+                    if (Math.abs(dx) === r || Math.abs(dy) === r) {
+                        const x = center + dx;
+                        const y = center + dy;
+                        
+                        if (this.isValidPosition(x, y) && this.board[y][x] === 0) {
+                            // 检查禁手（针对黑棋AI）
+                            if (this.currentPlayer === 1) {
+                                const forbiddenResult = this.checkForbidden(x, y);
+                                if (!forbiddenResult.isForbidden) {
+                                    positions.push({x, y});
+                                }
+                            } else {
+                                positions.push({x, y});
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (positions.length > 0) {
+                // 随机选择一个位置
+                return positions[Math.floor(Math.random() * positions.length)];
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 获取某个位置最长的连线长度
+     */
+    getMaxLine(x, y, player) {
+        const directions = [
+            { dx: 1, dy: 0 },
+            { dx: 0, dy: 1 },
+            { dx: 1, dy: 1 },
+            { dx: 1, dy: -1 }
+        ];
+        
+        let maxLength = 0;
+        
+        for (let dir of directions) {
+            const line = this.getLine(x, y, dir.dx, dir.dy, player);
+            maxLength = Math.max(maxLength, line.length);
+        }
+        
+        return maxLength;
     }
 }
 
