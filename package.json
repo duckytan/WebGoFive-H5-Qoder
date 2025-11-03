@@ -1,6 +1,6 @@
 {
   "name": "gomoku-game",
-  "version": "0.3.0",
+  "version": "1.0.1",
   "description": "五子棋游戏 - 基于HTML5 Canvas的单页应用",
   "main": "index.html",
   "scripts": {
