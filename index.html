@@ -54,7 +54,7 @@
                     <div class="status-content">
                         <div class="status-item">
                             <span class="status-label">模式:</span>
-                            <span class="status-value" id="game-mode">双人对战</span>
+                            <span class="status-value" id="game-mode">人机对战 (正常)</span>
                         </div>
                         <div class="status-item">
                             <span class="status-label">回合:</span>
@@ -81,7 +81,7 @@
                         </button>
                         <button type="button" class="btn btn--secondary" id="mode-toggle-btn">
                             <span class="icon">🔄</span>
-                            <span id="mode-toggle-text">切换到PvE</span>
+                            <span id="mode-toggle-text">切换到PvP</span>
                         </button>
                     </div>
                     
@@ -107,7 +107,7 @@
                 </div>
 
                 <!-- AI相关控制 (PvE模式时显示) -->
-                <div class="ai-controls" id="ai-controls" style="display: none;">
+                <div class="ai-controls" id="ai-controls">
                     <h3 class="section-title">AI设置</h3>
                     <div class="ai-settings">
                         <div class="setting-item">
@@ -315,12 +315,21 @@
                                 <label for="default-mode">默认模式:</label>
                                 <select id="default-mode" class="select">
                                     <option value="PvP">双人对战</option>
-                                    <option value="PvE">人机对战</option>
+                                    <option value="PvE" selected>人机对战</option>
                                 </select>
                             </div>
                             <div class="setting-item">
                                 <label for="default-difficulty">默认AI难度:</label>
                                 <select id="default-difficulty" class="select">
+                                    <option value="BEGINNER">新手</option>
+                                    <option value="NORMAL" selected>正常</option>
+                                    <option value="HARD">困难</option>
+                                    <option value="HELL">地狱</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="default-hint-strength">默认提示强度:</label>
+                                <select id="default-hint-strength" class="select">
                                     <option value="BEGINNER">新手</option>
                                     <option value="NORMAL" selected>正常</option>
                                     <option value="HARD">困难</option>
