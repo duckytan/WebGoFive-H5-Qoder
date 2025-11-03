@@ -9,6 +9,7 @@ class InterfaceDemo {
         this.timeInterval = null;
         this.aiThinking = false;
         this.aiTimer = null;
+        this.hintResetTimer = null;
         
         // 禁手提示配置
         this.forbiddenPromptConfig = {
@@ -247,6 +248,11 @@ class InterfaceDemo {
         this.addButtonClickEffect('new-game-btn');
         this.cancelAIThinking();
         
+        if (this.hintResetTimer) {
+            clearTimeout(this.hintResetTimer);
+            this.hintResetTimer = null;
+        }
+        
         // 重置游戏核心
         if (window.game) {
             window.game.reset();
@@ -341,6 +347,15 @@ class InterfaceDemo {
         this.currentPlayer = gameInfo.currentPlayer;
         
         this.updateGameStatus();
+        
+        if (this.hintResetTimer) {
+            clearTimeout(this.hintResetTimer);
+            this.hintResetTimer = null;
+        }
+        
+        if (window.boardRenderer && typeof window.boardRenderer.clearHintHighlight === 'function') {
+            window.boardRenderer.clearHintHighlight(false);
+        }
         
         // 启用悔棋按钮
         const undoBtn = document.getElementById('undo-btn');
@@ -464,24 +479,78 @@ class InterfaceDemo {
     showHint() {
         this.addButtonClickEffect('hint-btn');
         
-        // 模拟获取提示
-        const hintMessage = document.getElementById('hint-message');
-        if (hintMessage) {
-            hintMessage.textContent = '💡 AI建议: 在中心区域落子可获得更好的控制';
-            hintMessage.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #fff 100%)';
-            hintMessage.style.borderColor = '#4caf50';
-            
-            // 5秒后恢复
-            setTimeout(() => {
-                this.updateHintMessage('点击棋盘继续游戏');
-                if (hintMessage) {
-                    hintMessage.style.background = 'white';
-                    hintMessage.style.borderColor = '#ccc';
-                }
-            }, 5000);
+        if (!window.game) {
+            this.updateHintMessage('⚠️ 游戏核心未加载，无法提供提示');
+            console.error('[Demo] 游戏核心未加载，无法获取AI建议');
+            return;
         }
         
-        console.log('显示提示');
+        // 确保使用最新的玩家信息
+        if (typeof window.game.getGameInfo === 'function') {
+            const info = window.game.getGameInfo();
+            this.currentPlayer = info.currentPlayer;
+        }
+        
+        if (window.game.gameStatus === 'finished') {
+            this.updateHintMessage('⚠️ 游戏已结束，无法获取提示');
+            console.warn('[Demo] 游戏已结束，无法获取提示');
+            return;
+        }
+        
+        if (this.gameMode === 'PvE') {
+            if (this.aiThinking) {
+                this.updateHintMessage('⌛ AI正在思考，请稍候');
+                console.warn('[Demo] AI正在思考，暂不提供提示');
+                return;
+            }
+            if (window.game.currentPlayer === 2) {
+                this.updateHintMessage('⚠️ 当前为AI回合，无需提示');
+                console.warn('[Demo] 当前为AI回合，无需提示');
+                return;
+            }
+        }
+        
+        console.log('[Demo] 正在获取AI建议...');
+        const aiMove = window.game.getAIMove();
+        
+        if (!aiMove) {
+            this.updateHintMessage('⚠️ 暂时没有可用的AI建议');
+            console.warn('[Demo] AI无法找到有效建议位置');
+            return;
+        }
+        
+        const coordinate = this.formatBoardCoordinate(aiMove.x, aiMove.y);
+        const message = `💡 AI建议: 尝试在 ${coordinate} 落子`;
+        this.updateHintMessage(message);
+        
+        const hintMessage = document.getElementById('hint-message');
+        if (hintMessage) {
+            hintMessage.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #fff 100%)';
+            hintMessage.style.borderColor = '#4caf50';
+        }
+        
+        if (window.boardRenderer && typeof window.boardRenderer.highlightHintPosition === 'function') {
+            window.boardRenderer.highlightHintPosition(aiMove.x, aiMove.y, { duration: 5000 });
+        }
+        
+        if (this.hintResetTimer) {
+            clearTimeout(this.hintResetTimer);
+        }
+        
+        this.hintResetTimer = setTimeout(() => {
+            this.hintResetTimer = null;
+            this.updateHintMessage('点击棋盘继续游戏');
+            const hintEl = document.getElementById('hint-message');
+            if (hintEl) {
+                hintEl.style.background = 'white';
+                hintEl.style.borderColor = '#ccc';
+            }
+            if (window.boardRenderer && typeof window.boardRenderer.clearHintHighlight === 'function') {
+                window.boardRenderer.clearHintHighlight();
+            }
+        }, 5000);
+        
+        console.log(`[Demo] AI建议位置: (${aiMove.x}, ${aiMove.y}) = ${coordinate}`);
     }
     
     showSettings() {
