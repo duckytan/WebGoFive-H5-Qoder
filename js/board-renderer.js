@@ -222,15 +222,14 @@ class SimpleBoardRenderer {
         console.log('[BoardRenderer] 游戏结束', result);
         
         // 通知demo显示游戏结果
-        if (window.demo && window.demo.showGameResult) {
+        if (window.demo && typeof window.demo.showGameResult === 'function') {
             setTimeout(() => {
-                if (result.winner === 1) {
-                    window.demo.showGameResult('win');
-                } else if (result.winner === 2) {
-                    window.demo.showGameResult('lose');
-                } else {
-                    window.demo.showGameResult('draw');
-                }
+                window.demo.showGameResult({
+                    winner: result.winner,
+                    reason: result.reason,
+                    winLine: result.winLine,
+                    data: result
+                });
             }, 300);
         }
     }
