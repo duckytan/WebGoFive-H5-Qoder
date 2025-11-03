@@ -74,7 +74,21 @@ class GomokuGame {
             };
         }
         
-        // 2. 记录落子
+        // 2. 检查禁手（仅对黑棋有效）
+        if (this.currentPlayer === 1) {
+            const forbiddenResult = this.checkForbidden(x, y);
+            if (forbiddenResult.isForbidden) {
+                return {
+                    success: false,
+                    error: `禁手：${forbiddenResult.type}`,
+                    code: 'FORBIDDEN_MOVE',
+                    forbiddenType: forbiddenResult.type,
+                    details: forbiddenResult.details
+                };
+            }
+        }
+        
+        // 3. 记录落子
         this.board[y][x] = this.currentPlayer;
         this.moves.push({
             x: x,
@@ -224,6 +238,277 @@ class GomokuGame {
             count++;
             nx += dx;
             ny += dy;
+        }
+        
+        return count;
+    }
+    
+    /**
+     * 检查禁手情况（当前仅实现三三禁手）
+     * @param {number} x
+     * @param {number} y
+     * @returns {{isForbidden:boolean,type:string|null,details:object}}
+     */
+    checkForbidden(x, y) {
+        const player = this.currentPlayer;
+        const result = {
+            isForbidden: false,
+            type: null,
+            details: {}
+        };
+        
+        // 仅对黑棋检测禁手
+        if (player !== 1) {
+            return result;
+        }
+        
+        // 临时落子以进行检测
+        this.board[y][x] = player;
+        
+        // 检查长连禁手（六连及以上）
+        const longLineInfo = this.checkLongLine(x, y, player);
+        if (longLineInfo.hasLongLine) {
+            this.board[y][x] = 0;
+            result.isForbidden = true;
+            result.type = '长连禁手';
+            result.details = longLineInfo;
+            return result;
+        }
+        
+        const openThreeInfo = this.countOpenThrees(x, y, player);
+        const openFourInfo = this.countOpenFours(x, y, player);
+        this.board[y][x] = 0;
+        
+        const details = {
+            openThrees: openThreeInfo,
+            openFours: openFourInfo,
+            longLine: longLineInfo
+        };
+        
+        if (openFourInfo.total >= 2) {
+            result.isForbidden = true;
+            result.type = '四四禁手';
+            result.details = details;
+            return result;
+        }
+        
+        if (openThreeInfo.total >= 2) {
+            result.isForbidden = true;
+            result.type = '三三禁手';
+            result.details = details;
+            return result;
+        }
+        
+        result.details = details;
+        return result;
+    }
+    
+    /**
+     * 统计某落子形成的活三数量
+     * @param {number} x
+     * @param {number} y
+     * @param {number} player
+     * @returns {{total:number, directions:Array}}
+     */
+    countOpenThrees(x, y, player) {
+        const directions = [
+            { dx: 1, dy: 0, name: 'horizontal' },
+            { dx: 0, dy: 1, name: 'vertical' },
+            { dx: 1, dy: 1, name: 'diag_down' },
+            { dx: 1, dy: -1, name: 'diag_up' }
+        ];
+        
+        let total = 0;
+        const detail = [];
+        
+        directions.forEach((dir) => {
+            const signature = this.getLineSignature(x, y, dir.dx, dir.dy, player, 4);
+            const count = this.countOpenThreesInLine(signature);
+            if (count > 0) {
+                total += count;
+                detail.push({
+                    direction: dir.name,
+                    count,
+                    signature
+                });
+            }
+        });
+        
+        return {
+            total,
+            directions: detail
+        };
+    }
+    
+    /**
+     * 生成指定方向的线性表示
+     * @param {number} x
+     * @param {number} y
+     * @param {number} dx
+     * @param {number} dy
+     * @param {number} player
+     * @param {number} range
+     * @returns {string}
+     */
+    getLineSignature(x, y, dx, dy, player, range = 4) {
+        let signature = '';
+        
+        for (let offset = -range; offset <= range; offset++) {
+            const nx = x + dx * offset;
+            const ny = y + dy * offset;
+            
+            if (!this.isValidPosition(nx, ny)) {
+                signature += '3'; // 边界
+                continue;
+            }
+            
+            const cell = this.board[ny][nx];
+            if (cell === 0) {
+                signature += '0';
+            } else if (cell === player) {
+                signature += '1';
+            } else {
+                signature += '2';
+            }
+        }
+        
+        return signature;
+    }
+    
+    /**
+     * 统计单个方向上的活三数量
+     * @param {string} lineSignature
+     * @returns {number}
+     */
+    countOpenThreesInLine(lineSignature) {
+        const windowSize = 6;
+        let count = 0;
+        
+        for (let i = 0; i <= lineSignature.length - windowSize; i++) {
+            const segment = lineSignature.slice(i, i + windowSize);
+            
+            // 外部必须为空位
+            if (segment[0] !== '0' || segment[5] !== '0') {
+                continue;
+            }
+            
+            // 不允许包含对手棋子或边界
+            if (segment.includes('2') || segment.includes('3')) {
+                continue;
+            }
+            
+            const middle = segment.slice(1, 5);
+            const ones = (middle.match(/1/g) || []).length;
+            const zeros = (middle.match(/0/g) || []).length;
+            
+            if (ones === 3 && zeros === 1) {
+                count++;
+            }
+        }
+        
+        return count;
+    }
+    
+    /**
+     * 统计某落子形成的活四数量
+     * @param {number} x
+     * @param {number} y
+     * @param {number} player
+     * @returns {{total:number, directions:Array}}
+     */
+    countOpenFours(x, y, player) {
+        const directions = [
+            { dx: 1, dy: 0, name: 'horizontal' },
+            { dx: 0, dy: 1, name: 'vertical' },
+            { dx: 1, dy: 1, name: 'diag_down' },
+            { dx: 1, dy: -1, name: 'diag_up' }
+        ];
+        
+        let total = 0;
+        const detail = [];
+        
+        directions.forEach((dir) => {
+            const signature = this.getLineSignature(x, y, dir.dx, dir.dy, player, 4);
+            const count = this.countOpenFoursInLine(signature);
+            if (count > 0) {
+                total += count;
+                detail.push({
+                    direction: dir.name,
+                    count,
+                    signature
+                });
+            }
+        });
+        
+        return {
+            total,
+            directions: detail
+        };
+    }
+    
+    /**
+     * 检查是否形成长连（≥6）
+     * @param {number} x
+     * @param {number} y
+     * @param {number} player
+     * @returns {{hasLongLine:boolean, lines:Array}}
+     */
+    checkLongLine(x, y, player) {
+        const directions = [
+            { dx: 1, dy: 0, name: 'horizontal' },
+            { dx: 0, dy: 1, name: 'vertical' },
+            { dx: 1, dy: 1, name: 'diag_down' },
+            { dx: 1, dy: -1, name: 'diag_up' }
+        ];
+        
+        let hasLongLine = false;
+        const lines = [];
+        
+        directions.forEach((dir) => {
+            const line = this.getLine(x, y, dir.dx, dir.dy, player);
+            if (line.length >= 6) {
+                hasLongLine = true;
+                lines.push({
+                    direction: dir.name,
+                    length: line.length,
+                    coordinates: line
+                });
+            }
+        });
+        
+        return {
+            hasLongLine,
+            lines
+        };
+    }
+    
+    /**
+     * 统计单个方向上的活四数量
+     * @param {string} lineSignature
+     * @returns {number}
+     */
+    countOpenFoursInLine(lineSignature) {
+        const windowSize = 6;
+        let count = 0;
+        
+        for (let i = 0; i <= lineSignature.length - windowSize; i++) {
+            const segment = lineSignature.slice(i, i + windowSize);
+            
+            if (segment[0] !== '0' || segment[5] !== '0') {
+                continue;
+            }
+            
+            if (segment.includes('2') || segment.includes('3')) {
+                continue;
+            }
+            
+            const middle = segment.slice(1, 5);
+            const ones = (middle.match(/1/g) || []).length;
+            const zeros = (middle.match(/0/g) || []).length;
+            
+            if (ones === 4 && zeros === 0) {
+                count++;
+            }
         }
         
         return count;

@@ -228,6 +228,13 @@ class InterfaceDemo {
                     if (undoBtn) {
                         undoBtn.disabled = true;
                     }
+                    
+                    if (this.gameSaveLoad) {
+                        this.gameSaveLoad.clearAutoSave();
+                    }
+                } else if (this.gameSaveLoad && this.gameSaveLoad.autoSaveEnabled) {
+                    // 悔棋后重新保存
+                    this.gameSaveLoad.autoSaveToLocal();
                 }
                 
                 console.log('[Demo] 悔棋成功');
@@ -259,6 +266,17 @@ class InterfaceDemo {
         if (undoBtn) undoBtn.disabled = false;
         if (saveBtn) saveBtn.disabled = false;
         if (replayBtn) replayBtn.disabled = false;
+        
+        // 自动保存（每步落子后）
+        if (this.gameSaveLoad && this.gameSaveLoad.autoSaveEnabled) {
+            this.gameSaveLoad.autoSaveToLocal();
+        }
+        
+        // 如果游戏结束，清除自动保存
+        if (result.gameOver && this.gameSaveLoad) {
+            this.gameSaveLoad.clearAutoSave();
+            console.log('[Demo] 游戏结束，已清除自动保存');
+        }
         
         // 如果是PvE模式且轮到AI
         if (!result.gameOver && this.gameMode === 'PvE' && this.currentPlayer === 2) {

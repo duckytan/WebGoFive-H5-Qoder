@@ -6,6 +6,10 @@ class GameSaveLoad {
         this.autoSaveInterval = null;
         
         this.setupEventListeners();
+        
+        if (this.autoSaveEnabled) {
+            this.startAutoSave();
+        }
     }
     
     setupEventListeners() {
@@ -556,9 +560,32 @@ class GameSaveLoad {
             const savedData = localStorage.getItem('gomoku_auto_save');
             if (savedData) {
                 const gameData = JSON.parse(savedData);
-                if (confirm('发现自动保存的棋局，是否恢复？')) {
+                
+                // 验证数据有效性
+                if (!gameData || !gameData.moves || gameData.moves.length === 0) {
+                    localStorage.removeItem('gomoku_auto_save');
+                    return false;
+                }
+                
+                // 显示友好的提示信息
+                const moveCount = gameData.moves.length;
+                const date = new Date(gameData.timestamp || Date.now());
+                const timeStr = date.toLocaleString('zh-CN', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const message = `发现上次未完成的对局（${moveCount}步，${timeStr}），是否继续？`;
+                
+                if (confirm(message)) {
                     this.loadGameFromData(gameData);
+                    this.showMessage('棋局已恢复', 'success');
                     return true;
+                } else {
+                    // 用户选择不恢复，清除自动保存
+                    localStorage.removeItem('gomoku_auto_save');
                 }
             }
         } catch (error) {
