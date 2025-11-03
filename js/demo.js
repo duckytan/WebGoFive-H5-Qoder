@@ -8,6 +8,18 @@ class InterfaceDemo {
         this.gameTime = 0;
         this.timeInterval = null;
         
+        // 禁手提示配置
+        this.forbiddenPromptConfig = {
+            showMessage: true,
+            highlight: true,
+            highlightDuration: 1800,
+            highlightColor: 'rgba(211, 47, 47, 0.85)',
+            borderColor: '#d32f2f',
+            textColor: '#b71c1c',
+            showLabel: true,
+            logDetail: false
+        };
+        
         // 初始化新功能模块
         this.gameSaveLoad = null;
         this.gameReplay = null;
@@ -284,6 +296,70 @@ class InterfaceDemo {
         }
         
         console.log('[Demo] 落子结果处理完成');
+    }
+    
+    handleForbiddenMove({ x, y, result }) {
+        const config = this.forbiddenPromptConfig || {};
+        const type = (result && result.forbiddenType) || '禁手';
+        const coordinate = this.formatBoardCoordinate(x, y);
+        const directions = this.formatForbiddenDirections(result && result.details);
+        let message = `⚠️ ${type}，黑棋不能在 ${coordinate} 落子`;
+        if (directions) {
+            message += `（方向：${directions}）`;
+        }
+        
+        if (config.showMessage !== false) {
+            this.updateHintMessage(message);
+        }
+        
+        if (config.logDetail) {
+            console.info('[ForbiddenMove]', { coordinate, type, details: result?.details });
+        }
+    }
+    
+    configureForbiddenPrompt(options = {}) {
+        this.forbiddenPromptConfig = Object.assign({}, this.forbiddenPromptConfig, options);
+        if (window.boardRenderer && typeof window.boardRenderer.render === 'function') {
+            window.boardRenderer.render();
+        }
+    }
+    
+    formatForbiddenDirections(details) {
+        if (!details) {
+            return '';
+        }
+        
+        const dirMap = {
+            horizontal: '横向',
+            vertical: '纵向',
+            diag_down: '正斜线',
+            diag_up: '反斜线'
+        };
+        const descriptors = [];
+        const addDirection = (direction, count) => {
+            if (!direction) return;
+            const label = dirMap[direction] || direction;
+            descriptors.push(count && count > 1 ? `${label}×${count}` : label);
+        };
+        
+        if (details.longLine && details.longLine.hasLongLine && Array.isArray(details.longLine.lines)) {
+            details.longLine.lines.forEach(line => addDirection(line.direction));
+        }
+        if (details.openFours && details.openFours.total > 0 && Array.isArray(details.openFours.directions)) {
+            details.openFours.directions.forEach(item => addDirection(item.direction, item.count));
+        }
+        if (details.openThrees && details.openThrees.total > 0 && Array.isArray(details.openThrees.directions)) {
+            details.openThrees.directions.forEach(item => addDirection(item.direction, item.count));
+        }
+        
+        const unique = [...new Set(descriptors)];
+        return unique.join('、');
+    }
+    
+    formatBoardCoordinate(x, y) {
+        const letters = 'ABCDEFGHIJKLMNO';
+        const column = letters[x] || String(x + 1);
+        return `${column}${y + 1}`;
     }
     
     toggleGameMode() {

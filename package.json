@@ -1,0 +1,63 @@
+{
+  "name": "gomoku-game",
+  "version": "0.3.0",
+  "description": "五子棋游戏 - 基于HTML5 Canvas的单页应用",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gomoku",
+    "五子棋",
+    "game",
+    "canvas",
+    "javascript"
+  ],
+  "author": "AI开发助手",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/gomoku-game"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {},
+  "milestones": {
+    "milestone1": {
+      "name": "核心游戏引擎",
+      "version": "0.1.0",
+      "status": "completed",
+      "completedDate": "2024-10-30"
+    },
+    "milestone2": {
+      "name": "数据持久化",
+      "version": "0.2.0",
+      "status": "completed",
+      "completedDate": "2024-10-31"
+    },
+    "milestone3": {
+      "name": "禁手规则",
+      "version": "0.3.0",
+      "status": "completed",
+      "completedDate": "2024-10-31"
+    },
+    "milestone4": {
+      "name": "AI系统",
+      "version": "0.4.0",
+      "status": "pending"
+    },
+    "milestone5": {
+      "name": "用户体验优化",
+      "version": "0.5.0",
+      "status": "pending"
+    },
+    "milestone6": {
+      "name": "测试和发布",
+      "version": "1.0.0",
+      "status": "pending"
+    }
+  }
+}
