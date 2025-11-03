@@ -106,7 +106,7 @@ class GameReplay {
             this.replayData = this.getReplayData();
             
             if (!this.replayData || !this.replayData.moves || this.replayData.moves.length === 0) {
-                this.showMessage('没有可回放的棋局', 'warning');
+                GameUtils.showMessage('没有可回放的棋局', 'warning');
                 this.originalGameData = null;
                 return;
             }
@@ -127,7 +127,7 @@ class GameReplay {
             
         } catch (error) {
             console.error('启动回放失败:', error);
-            this.showMessage('回放失败: ' + error.message, 'error');
+            GameUtils.showMessage('回放失败: ' + error.message, 'error');
         }
     }
     
@@ -588,7 +588,7 @@ class GameReplay {
      */
     exportReplay() {
         if (!this.replayData) {
-            this.showMessage('没有可导出的回放数据', 'warning');
+            GameUtils.showMessage('没有可导出的回放数据', 'warning');
             return;
         }
         
@@ -600,28 +600,16 @@ class GameReplay {
             };
             
             const fileName = this.generateReplayFileName();
-            const jsonData = JSON.stringify(exportData, null, 2);
             
-            // 创建下载链接
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            
-            // 清理
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            this.showMessage('回放数据导出成功', 'success');
+            if (GameUtils.downloadAsJSON(exportData, fileName)) {
+                GameUtils.showMessage('回放数据导出成功', 'success');
+            } else {
+                GameUtils.showMessage('导出失败', 'error');
+            }
             
         } catch (error) {
             console.error('导出回放失败:', error);
-            this.showMessage('导出失败: ' + error.message, 'error');
+            GameUtils.showMessage('导出失败: ' + error.message, 'error');
         }
     }
     
@@ -670,34 +658,6 @@ class GameReplay {
             minute: '2-digit',
             second: '2-digit'
         });
-    }
-    
-    /**
-     * 显示消息
-     */
-    showMessage(message, type = 'info') {
-        const hintMessage = document.getElementById('hint-message');
-        if (hintMessage) {
-            hintMessage.textContent = message;
-            
-            // 根据类型设置样式
-            if (type === 'error') {
-                hintMessage.style.color = '#d32f2f';
-            } else if (type === 'success') {
-                hintMessage.style.color = '#388e3c';
-            } else if (type === 'warning') {
-                hintMessage.style.color = '#f57c00';
-            } else {
-                hintMessage.style.color = '';
-            }
-            
-            // 3秒后恢复默认样式
-            setTimeout(() => {
-                hintMessage.style.color = '';
-            }, 3000);
-        }
-        
-        console.log(`[${type.toUpperCase()}] ${message}`);
     }
     
     /**
