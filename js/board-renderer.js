@@ -62,6 +62,10 @@ class SimpleBoardRenderer {
         this.forbiddenHighlight = null;
         this.forbiddenHighlightTimer = null;
         
+        // AI提示高亮配置
+        this.hintHighlight = null;
+        this.hintHighlightTimer = null;
+        
         // 绑定点击事件
         this.setupEventListeners();
         
@@ -133,6 +137,7 @@ class SimpleBoardRenderer {
         if (result.success) {
             // 同步棋盘状态
             this.board = window.game.getBoardState();
+            this.clearHintHighlight(false);
             this.render();
             
             console.log(`[BoardRenderer] 落子成功: (${x}, ${y})`);
@@ -216,6 +221,108 @@ class SimpleBoardRenderer {
     }
     
     /**
+     * 高亮AI建议位置
+     */
+    highlightHintPosition(x, y, options = {}) {
+        const isValidCoordinate = Number.isInteger(x) &&
+            Number.isInteger(y) &&
+            x >= 0 && x < this.boardSize &&
+            y >= 0 && y < this.boardSize;
+        
+        if (!isValidCoordinate) {
+            console.warn(`[BoardRenderer] 无法高亮AI建议，坐标无效: (${x}, ${y})`);
+            return;
+        }
+        
+        if (!this.board || this.board[y][x] !== 0) {
+            console.warn(`[BoardRenderer] AI建议位置已被占用: (${x}, ${y})`);
+            this.clearHintHighlight(false);
+            return;
+        }
+        
+        if (this.hintHighlightTimer) {
+            clearTimeout(this.hintHighlightTimer);
+            this.hintHighlightTimer = null;
+        }
+        
+        this.hintHighlight = {
+            x,
+            y,
+            timestamp: Date.now()
+        };
+        
+        const duration = options.duration === undefined ? 5000 : options.duration;
+        const shouldAutoClear = typeof duration === 'number' && isFinite(duration) && duration > 0;
+        
+        if (shouldAutoClear) {
+            this.hintHighlightTimer = setTimeout(() => {
+                this.clearHintHighlight();
+            }, duration);
+        }
+        
+        this.render();
+    }
+    
+    clearHintHighlight(redraw = true) {
+        if (this.hintHighlightTimer) {
+            clearTimeout(this.hintHighlightTimer);
+            this.hintHighlightTimer = null;
+        }
+        
+        if (this.hintHighlight) {
+            this.hintHighlight = null;
+            if (redraw) {
+                this.render();
+            }
+        }
+    }
+    
+    drawHintHighlight() {
+        if (!this.hintHighlight) {
+            return;
+        }
+        
+        const { x, y } = this.hintHighlight;
+        
+        if (!this.board || !this.board[y] || this.board[y][x] !== 0) {
+            this.clearHintHighlight(false);
+            return;
+        }
+        
+        const screenX = this.padding + x * this.cellSize;
+        const screenY = this.padding + y * this.cellSize;
+        const outerRadius = this.cellSize * 0.48;
+        const innerRadius = this.cellSize * 0.32;
+        const crossSize = this.cellSize * 0.18;
+        
+        this.ctx.save();
+        
+        this.ctx.strokeStyle = 'rgba(76, 175, 80, 0.9)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([6, 6]);
+        this.ctx.beginPath();
+        this.ctx.arc(screenX, screenY, outerRadius, 0, 2 * Math.PI);
+        this.ctx.stroke();
+        
+        this.ctx.setLineDash([]);
+        this.ctx.fillStyle = 'rgba(129, 199, 132, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.arc(screenX, screenY, innerRadius, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        this.ctx.strokeStyle = 'rgba(67, 160, 71, 0.9)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(screenX - crossSize, screenY);
+        this.ctx.lineTo(screenX + crossSize, screenY);
+        this.ctx.moveTo(screenX, screenY - crossSize);
+        this.ctx.lineTo(screenX, screenY + crossSize);
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+    }
+    
+    /**
      * 处理游戏结束事件
      */
     handleGameOver(result) {
@@ -272,6 +379,9 @@ class SimpleBoardRenderer {
         
         // 绘制悬停预览
         this.drawHoverPreview();
+        
+        // 绘制AI提示高亮
+        this.drawHintHighlight();
         
         // 绘制禁手高亮
         this.drawForbiddenHighlight();
@@ -498,6 +608,7 @@ class SimpleBoardRenderer {
             this.board = Array(15).fill().map(() => Array(15).fill(0));
         }
         
+        this.clearHintHighlight(false);
         this.render();
         console.log('棋盘已清空');
     }
