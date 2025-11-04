@@ -34,7 +34,7 @@ npx http-server -p 8080
 
 ### 在线体验
 
-访问在线演示: [Demo]([https://your-username.github.io/gomoku-game](https://duckytan.github.io/WebGoFive-H5-Qoder/))
+访问在线演示: [Demo](https://duckytan.github.io/WebGoFive-H5-Qoder/)
 
 ## 📖 文档
 
