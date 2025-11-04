@@ -276,9 +276,23 @@ const GameUtils = {
     }
 };
 
+const GAME_UTILS_MODULE_INFO = {
+    name: 'GameUtils',
+    version: '1.0.1',
+    author: '项目团队',
+    dependencies: []
+};
+
+GameUtils.__moduleInfo = GAME_UTILS_MODULE_INFO;
+
 // 导出到全局作用域
 if (typeof window !== 'undefined') {
     window.GameUtils = GameUtils;
+    if (typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('moduleLoaded', {
+            detail: GAME_UTILS_MODULE_INFO
+        }));
+    }
 }
 
 // 支持ES模块导出

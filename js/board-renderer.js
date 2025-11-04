@@ -660,14 +660,29 @@ class SimpleBoardRenderer {
     }
 }
 
+const BOARD_RENDERER_MODULE_INFO = {
+    name: 'SimpleBoardRenderer',
+    version: '1.0.1',
+    author: '项目团队',
+    dependencies: [
+        'GomokuGame',
+        'GameUtils'
+    ]
+};
+
 // 导出类到全局作用域（支持多实例创建）
 if (typeof window !== 'undefined') {
-    window.SimpleBoardRenderer = SimpleBoardRenderer;
+    window.SimpleBoardRenderer = Object.assign(SimpleBoardRenderer, { __moduleInfo: BOARD_RENDERER_MODULE_INFO });
+    if (typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('moduleLoaded', {
+            detail: BOARD_RENDERER_MODULE_INFO
+        }));
+    }
 }
 
 // 支持CommonJS模块导出
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SimpleBoardRenderer;
+    module.exports = Object.assign(SimpleBoardRenderer, { __moduleInfo: BOARD_RENDERER_MODULE_INFO });
 }
 
 // 在页面加载完成后初始化默认棋盘渲染器实例

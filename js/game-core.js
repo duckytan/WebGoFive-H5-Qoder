@@ -1525,17 +1525,32 @@ class GomokuGame {
     }
 }
 
+const GAME_CORE_MODULE_INFO = {
+    name: 'GomokuGame',
+    version: '1.0.1',
+    author: '项目团队',
+    dependencies: [
+        'GameUtils'
+    ]
+};
+
 // 导出到全局作用域
 if (typeof window !== 'undefined') {
-    window.GomokuGame = GomokuGame;
+    window.GomokuGame = Object.assign(GomokuGame, { __moduleInfo: GAME_CORE_MODULE_INFO });
     
     // 创建全局游戏实例
-    window.game = new GomokuGame();
+    window.game = new window.GomokuGame();
     
     console.log('[GameCore] 游戏核心引擎已加载并创建全局实例 window.game');
+    
+    if (typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('moduleLoaded', {
+            detail: GAME_CORE_MODULE_INFO
+        }));
+    }
 }
 
 // 支持模块导出（如果使用模块系统）
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = GomokuGame;
+    module.exports = Object.assign(GomokuGame, { __moduleInfo: GAME_CORE_MODULE_INFO });
 }

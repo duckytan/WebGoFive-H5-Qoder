@@ -1,7 +1,129 @@
 // 五子棋界面演示脚本 - 用于展示各种界面效果
 
+/**
+ * 模块依赖检查工具
+ */
+const ModuleDependencyChecker = {
+    /**
+     * 检查所有必需模块是否已加载
+     * @param {Array<string>} requiredModules - 必需模块列表
+     * @returns {Object} 检查结果
+     */
+    checkDependencies(requiredModules) {
+        if (typeof window === 'undefined') {
+            return {
+                success: true,
+                missing: [],
+                loaded: [],
+                message: '检测环境未提供 window 对象，跳过依赖检查'
+            };
+        }
+        
+        const missing = [];
+        const loaded = [];
+        
+        requiredModules.forEach(moduleName => {
+            if (typeof window[moduleName] === 'undefined') {
+                missing.push(moduleName);
+            } else {
+                loaded.push({
+                    name: moduleName,
+                    info: window[moduleName].__moduleInfo || null
+                });
+            }
+        });
+        
+        return {
+            success: missing.length === 0,
+            missing,
+            loaded,
+            message: missing.length > 0 
+                ? `缺少必需模块: ${missing.join(', ')}` 
+                : '所有依赖模块已加载'
+        };
+    },
+    
+    /**
+     * 检查模块版本兼容性
+     * @param {string} moduleName - 模块名称
+     * @param {string} minVersion - 最低版本要求
+     * @returns {boolean} 是否兼容
+     */
+    checkVersion(moduleName, minVersion) {
+        if (typeof window === 'undefined' || typeof window[moduleName] === 'undefined') {
+            return false;
+        }
+        
+        const module = window[moduleName];
+        if (!module || !module.__moduleInfo) {
+            return false;
+        }
+        
+        const currentVersion = module.__moduleInfo.version;
+        return this.compareVersion(currentVersion, minVersion) >= 0;
+    },
+    
+    /**
+     * 比较版本号
+     * @param {string} v1 - 版本1
+     * @param {string} v2 - 版本2
+     * @returns {number} 1:v1>v2, 0:相等, -1:v1<v2
+     */
+    compareVersion(v1, v2) {
+        const parts1 = v1.split('.').map(Number);
+        const parts2 = v2.split('.').map(Number);
+        
+        for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+            const p1 = parts1[i] || 0;
+            const p2 = parts2[i] || 0;
+            
+            if (p1 > p2) return 1;
+            if (p1 < p2) return -1;
+        }
+        
+        return 0;
+    },
+    
+    /**
+     * 打印模块依赖信息
+     */
+    logModuleInfo() {
+        console.log('\n=== 模块加载信息 ===');
+        
+        const moduleNames = ['GameUtils', 'GomokuGame', 'SimpleBoardRenderer', 'GameSaveLoad', 'GameReplay'];
+        
+        moduleNames.forEach(name => {
+            const module = window[name];
+            if (module && module.__moduleInfo) {
+                const info = module.__moduleInfo;
+                console.log(`✅ ${info.name} v${info.version} - 依赖: [${info.dependencies.join(', ') || '无'}]`);
+            } else {
+                console.log(`❌ ${name} - 未加载或无版本信息`);
+            }
+        });
+        
+        console.log('===================\n');
+    }
+};
+
+const INTERFACE_DEMO_REQUIRED_MODULES = ['GameUtils', 'GomokuGame', 'SimpleBoardRenderer'];
+const INTERFACE_DEMO_OPTIONAL_MODULES = ['GameSaveLoad', 'GameReplay'];
+
 class InterfaceDemo {
     constructor() {
+        const dependencyCheck = ModuleDependencyChecker.checkDependencies(INTERFACE_DEMO_REQUIRED_MODULES);
+        if (!dependencyCheck.success) {
+            console.error(`[Demo] ${dependencyCheck.message}`);
+            ModuleDependencyChecker.logModuleInfo();
+            throw new Error(`InterfaceDemo 初始化失败: ${dependencyCheck.message}`);
+        }
+        
+        INTERFACE_DEMO_OPTIONAL_MODULES.forEach(moduleName => {
+            if (typeof window[moduleName] !== 'undefined' && window[moduleName].__moduleInfo) {
+                console.log(`[Demo] 可选模块 ${moduleName} v${window[moduleName].__moduleInfo.version} 可用`);
+            }
+        });
+        
         this.currentPlayer = 1; // 1为黑棋，2为白棋
         this.gameMode = 'PvE'; // PvP或PvE
         this.moveCount = 0;
@@ -952,10 +1074,48 @@ class InterfaceDemo {
     }
 }
 
+const INTERFACE_DEMO_MODULE_INFO = {
+    name: 'InterfaceDemo',
+    version: '1.0.1',
+    author: '项目团队',
+    dependencies: INTERFACE_DEMO_REQUIRED_MODULES
+};
+
+if (typeof window !== 'undefined') {
+    window.InterfaceDemo = Object.assign(InterfaceDemo, {
+        __moduleInfo: INTERFACE_DEMO_MODULE_INFO,
+        __requiredModules: INTERFACE_DEMO_REQUIRED_MODULES,
+        __optionalModules: INTERFACE_DEMO_OPTIONAL_MODULES
+    });
+    window.ModuleDependencyChecker = ModuleDependencyChecker;
+    
+    if (typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('moduleLoaded', {
+            detail: INTERFACE_DEMO_MODULE_INFO
+        }));
+    }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Object.assign(InterfaceDemo, {
+        __moduleInfo: INTERFACE_DEMO_MODULE_INFO,
+        __requiredModules: INTERFACE_DEMO_REQUIRED_MODULES,
+        __optionalModules: INTERFACE_DEMO_OPTIONAL_MODULES
+    });
+    module.exports.ModuleDependencyChecker = ModuleDependencyChecker;
+}
+
 // 页面加载完成后初始化演示
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('五子棋界面演示初始化...');
-    window.demo = new InterfaceDemo();
+    const dependencyCheck = ModuleDependencyChecker.checkDependencies(INTERFACE_DEMO_REQUIRED_MODULES);
+    if (!dependencyCheck.success) {
+        console.error(`[Demo] 初始化失败: ${dependencyCheck.message}`);
+        ModuleDependencyChecker.logModuleInfo();
+        return;
+    }
+    
+    console.log('[Demo] 五子棋界面演示初始化...');
+    window.demo = new window.InterfaceDemo();
     
     // 演示快捷键提示
     setTimeout(() => {

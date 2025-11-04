@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API模块化测试页面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .test-result.pass {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-result.fail {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .summary {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge.success { background: #28a745; color: white; }
+        .badge.warning { background: #ffc107; color: #333; }
+        .badge.danger { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔍 API模块化功能测试</h1>
+    <p>本页面用于验证所有API模块化改进是否正常工作</p>
+
+    <div class="summary" id="summary">
+        <h3>📊 测试概览</h3>
+        <p>页面加载中，等待模块加载完成...</p>
+    </div>
+
+    <div class="test-section">
+        <h2>1. 模块加载状态检查</h2>
+        <button onclick="testModuleLoad()">运行测试</button>
+        <div id="module-load-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 模块版本信息检查</h2>
+        <button onclick="testModuleVersion()">运行测试</button>
+        <div id="module-version-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 模块依赖检查</h2>
+        <button onclick="testDependencyCheck()">运行测试</button>
+        <div id="dependency-check-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 模块加载事件测试</h2>
+        <div id="event-result">
+            <p>监听中... (请刷新页面查看完整事件)</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. 依赖关系可视化</h2>
+        <button onclick="visualizeDependencies()">显示依赖图</button>
+        <div id="dependency-graph"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. API导出完整性检查</h2>
+        <button onclick="testAPIExports()">运行测试</button>
+        <div id="api-export-result"></div>
+    </div>
+
+    <!-- 加载所有模块 -->
+    <script src="js/utils.js"></script>
+    <script src="js/game-core.js"></script>
+    <script src="js/board-renderer.js"></script>
+    <script src="js/game-save-load.js"></script>
+    <script src="js/game-replay.js"></script>
+    <script src="js/demo.js"></script>
+
+    <script>
+        let loadedModulesCount = 0;
+        const expectedModules = ['GameUtils', 'GomokuGame', 'SimpleBoardRenderer', 'GameSaveLoad', 'GameReplay', 'InterfaceDemo'];
+        const loadEvents = [];
+
+        // 监听模块加载事件
+        window.addEventListener('moduleLoaded', (event) => {
+            loadedModulesCount++;
+            loadEvents.push({
+                timestamp: new Date().toISOString(),
+                module: event.detail
+            });
+            
+            const eventDiv = document.getElementById('event-result');
+            const eventItem = document.createElement('div');
+            eventItem.className = 'test-result pass';
+            eventItem.innerHTML = `
+                <strong>✅ 模块加载事件触发</strong><br>
+                模块: ${event.detail.name} v${event.detail.version}<br>
+                时间: ${new Date().toLocaleTimeString()}<br>
+                依赖: [${event.detail.dependencies.join(', ') || '无'}]
+            `;
+            eventDiv.appendChild(eventItem);
+        });
+
+        // 测试1: 模块加载状态
+        function testModuleLoad() {
+            const result = document.getElementById('module-load-result');
+            result.innerHTML = '';
+            
+            let passCount = 0;
+            expectedModules.forEach(moduleName => {
+                const div = document.createElement('div');
+                const exists = typeof window[moduleName] !== 'undefined';
+                
+                div.className = `test-result ${exists ? 'pass' : 'fail'}`;
+                div.innerHTML = `
+                    ${exists ? '✅' : '❌'} <strong>${moduleName}</strong>: 
+                    ${exists ? '已加载' : '未加载'}
+                `;
+                result.appendChild(div);
+                
+                if (exists) passCount++;
+            });
+            
+            const summary = document.createElement('div');
+            summary.className = 'test-result info';
+            summary.innerHTML = `<strong>测试结果:</strong> ${passCount}/${expectedModules.length} 模块已加载`;
+            result.appendChild(summary);
+        }
+
+        // 测试2: 模块版本信息
+        function testModuleVersion() {
+            const result = document.getElementById('module-version-result');
+            result.innerHTML = '';
+            
+            expectedModules.forEach(moduleName => {
+                const module = window[moduleName];
+                const div = document.createElement('div');
+                
+                if (module && module.__moduleInfo) {
+                    const info = module.__moduleInfo;
+                    div.className = 'test-result pass';
+                    div.innerHTML = `
+                        ✅ <strong>${info.name}</strong><br>
+                        版本: <span class="badge success">${info.version}</span><br>
+                        作者: ${info.author}<br>
+                        依赖: [${info.dependencies.join(', ') || '无'}]
+                    `;
+                } else {
+                    div.className = 'test-result fail';
+                    div.innerHTML = `❌ <strong>${moduleName}</strong>: 无版本信息`;
+                }
+                result.appendChild(div);
+            });
+        }
+
+        // 测试3: 依赖检查
+        function testDependencyCheck() {
+            const result = document.getElementById('dependency-check-result');
+            result.innerHTML = '';
+            
+            // 测试正常场景
+            const test1 = ModuleDependencyChecker.checkDependencies(['GameUtils', 'GomokuGame']);
+            const div1 = document.createElement('div');
+            div1.className = `test-result ${test1.success ? 'pass' : 'fail'}`;
+            div1.innerHTML = `
+                <strong>测试场景1: 检查必需模块 ['GameUtils', 'GomokuGame']</strong><br>
+                结果: ${test1.success ? '✅ 通过' : '❌ 失败'}<br>
+                消息: ${test1.message}
+            `;
+            result.appendChild(div1);
+            
+            // 测试缺失场景
+            const test2 = ModuleDependencyChecker.checkDependencies(['NonExistentModule']);
+            const div2 = document.createElement('div');
+            div2.className = `test-result ${!test2.success ? 'pass' : 'fail'}`;
+            div2.innerHTML = `
+                <strong>测试场景2: 检查不存在的模块 ['NonExistentModule']</strong><br>
+                结果: ${!test2.success ? '✅ 正确检测到缺失' : '❌ 未检测到缺失'}<br>
+                消息: ${test2.message}
+            `;
+            result.appendChild(div2);
+            
+            // 版本检查
+            const versionCheck = ModuleDependencyChecker.checkVersion('GomokuGame', '1.0.0');
+            const div3 = document.createElement('div');
+            div3.className = `test-result ${versionCheck ? 'pass' : 'fail'}`;
+            div3.innerHTML = `
+                <strong>测试场景3: 版本兼容性检查 (GomokuGame >= 1.0.0)</strong><br>
+                结果: ${versionCheck ? '✅ 兼容' : '❌ 不兼容'}
+            `;
+            result.appendChild(div3);
+        }
+
+        // 测试5: 依赖关系可视化
+        function visualizeDependencies() {
+            const result = document.getElementById('dependency-graph');
+            result.innerHTML = '<h3>模块依赖关系图</h3>';
+            
+            const pre = document.createElement('pre');
+            let graph = '';
+            
+            expectedModules.forEach(name => {
+                const module = window[name];
+                if (module && module.__moduleInfo) {
+                    const info = module.__moduleInfo;
+                    graph += `${info.name} v${info.version}\n`;
+                    if (info.dependencies.length > 0) {
+                        info.dependencies.forEach(dep => {
+                            graph += `  └─> ${dep}\n`;
+                        });
+                    } else {
+                        graph += `  └─> (无依赖)\n`;
+                    }
+                    graph += '\n';
+                }
+            });
+            
+            pre.textContent = graph;
+            result.appendChild(pre);
+        }
+
+        // 测试6: API导出完整性
+        function testAPIExports() {
+            const result = document.getElementById('api-export-result');
+            result.innerHTML = '';
+            
+            const tests = [
+                { name: 'GameUtils.showMessage', test: () => typeof GameUtils.showMessage === 'function' },
+                { name: 'GomokuGame.prototype.placePiece', test: () => typeof window.game.placePiece === 'function' },
+                { name: 'SimpleBoardRenderer (构造函数)', test: () => typeof SimpleBoardRenderer === 'function' },
+                { name: 'window.boardRenderer (实例)', test: () => typeof window.boardRenderer === 'object' },
+                { name: 'GameSaveLoad (类)', test: () => typeof GameSaveLoad === 'function' },
+                { name: 'GameReplay (类)', test: () => typeof GameReplay === 'function' },
+                { name: 'InterfaceDemo (类)', test: () => typeof InterfaceDemo === 'function' },
+                { name: 'window.demo (实例)', test: () => typeof window.demo === 'object' },
+            ];
+            
+            let passCount = 0;
+            tests.forEach(({ name, test }) => {
+                const passed = test();
+                const div = document.createElement('div');
+                div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+                div.innerHTML = `${passed ? '✅' : '❌'} ${name}: ${passed ? '可用' : '不可用'}`;
+                result.appendChild(div);
+                if (passed) passCount++;
+            });
+            
+            const summary = document.createElement('div');
+            summary.className = 'test-result info';
+            summary.innerHTML = `<strong>API导出完整性:</strong> ${passCount}/${tests.length} 测试通过`;
+            result.appendChild(summary);
+        }
+
+        // 页面加载完成后自动运行所有测试
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                // 更新概览
+                const summary = document.getElementById('summary');
+                summary.innerHTML = `
+                    <h3>📊 测试概览</h3>
+                    <p>
+                        <span class="badge ${loadedModulesCount === expectedModules.length ? 'success' : 'warning'}">
+                            ${loadedModulesCount}/${expectedModules.length} 模块已加载
+                        </span>
+                        <span class="badge success">${loadEvents.length} 加载事件</span>
+                    </p>
+                    <button onclick="runAllTests()">运行所有测试</button>
+                    <button onclick="ModuleDependencyChecker.logModuleInfo()">查看模块信息(控制台)</button>
+                `;
+            }, 1000);
+        });
+
+        function runAllTests() {
+            testModuleLoad();
+            testModuleVersion();
+            testDependencyCheck();
+            visualizeDependencies();
+            testAPIExports();
+        }
+    </script>
+</body>
+</html>
