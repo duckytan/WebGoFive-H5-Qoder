@@ -1,7 +1,7 @@
 # H5五子棋游戏
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](./docs/history/VERSION.md)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](./docs/history/VERSION.md)
 
 > 基于 HTML5 Canvas 技术开发的在线五子棋游戏，支持双人对战和人机对战模式
 

@@ -67,6 +67,14 @@
 - [代码重构记录](./history/CODE_REFACTORING.md) - 项目结构和代码优化说明
 - [MCP服务器修复方案](./history/MCP_Server_修复方案.md) - 历史技术问题修复记录
 
+### 📊 质量报告 (Reports)
+> 项目质量检查和审计报告
+
+- [API模块化检查报告](./reports/API模块化检查报告.md) - 完整的API模块化审计报告
+- [API模块化改进记录](./reports/API模块化改进记录.md) - API模块化改进措施和效果
+- [API模块化优化总结](./reports/API模块化优化总结.md) - 第二阶段优化成果与验证
+- [优化任务完成清单](./reports/优化任务完成清单.md) - 全部任务完成情况一览
+
 ---
 
 ## 🎯 文档阅读指南

@@ -655,4 +655,228 @@ class CustomAI extends AIEngine {
 
 ---
 
+## 模块系统 (v1.0.2新增)
+
+### 模块元信息
+
+所有模块都包含 `__moduleInfo` 属性，提供版本和依赖信息。
+
+#### 查询模块信息
+
+```javascript
+// 查看模块版本
+console.log(GomokuGame.__moduleInfo);
+// 输出: { name: 'GomokuGame', version: '1.0.1', author: '项目团队', dependencies: ['GameUtils'] }
+
+// 查看所有模块
+Object.keys(window)
+    .filter(key => window[key]?.__moduleInfo)
+    .forEach(key => {
+        const info = window[key].__moduleInfo;
+        console.log(`${info.name} v${info.version}`);
+    });
+```
+
+### 依赖检查工具
+
+`ModuleDependencyChecker` 工具提供依赖检查功能。
+
+#### checkDependencies(requiredModules)
+
+检查必需模块是否已加载。
+
+```javascript
+/**
+ * @param {Array<string>} requiredModules - 必需模块名称数组
+ * @returns {Object} 检查结果
+ */
+const check = ModuleDependencyChecker.checkDependencies(['GomokuGame', 'GameUtils']);
+
+if (!check.success) {
+    console.error(check.message);
+    // 输出: "缺少必需模块: GameUtils"
+}
+```
+
+**返回值结构**:
+```javascript
+{
+    success: boolean,      // 是否所有模块都已加载
+    missing: string[],     // 缺失的模块列表
+    loaded: Array<{        // 已加载的模块信息
+        name: string,
+        info: Object
+    }>,
+    message: string        // 检查结果描述
+}
+```
+
+#### checkVersion(moduleName, minVersion)
+
+检查模块版本兼容性。
+
+```javascript
+/**
+ * @param {string} moduleName - 模块名称
+ * @param {string} minVersion - 最低版本要求
+ * @returns {boolean} 是否兼容
+ */
+const compatible = ModuleDependencyChecker.checkVersion('GomokuGame', '1.0.0');
+
+if (!compatible) {
+    console.warn('模块版本过低，请升级');
+}
+```
+
+#### compareVersion(v1, v2)
+
+比较版本号大小。
+
+```javascript
+/**
+ * @param {string} v1 - 版本1
+ * @param {string} v2 - 版本2
+ * @returns {number} 1:v1>v2, 0:相等, -1:v1<v2
+ */
+ModuleDependencyChecker.compareVersion('1.0.1', '1.0.0'); // 1
+ModuleDependencyChecker.compareVersion('1.0.0', '1.0.0'); // 0
+ModuleDependencyChecker.compareVersion('0.9.9', '1.0.0'); // -1
+```
+
+#### logModuleInfo()
+
+在控制台打印所有模块信息。
+
+```javascript
+ModuleDependencyChecker.logModuleInfo();
+
+// 输出:
+// === 模块加载信息 ===
+// ✅ GameUtils v1.0.1 - 依赖: []
+// ✅ GomokuGame v1.0.1 - 依赖: [GameUtils]
+// ✅ SimpleBoardRenderer v1.0.1 - 依赖: [GomokuGame, GameUtils]
+// ===================
+```
+
+### 模块加载事件
+
+所有模块在加载时会触发 `moduleLoaded` 事件。
+
+#### 监听模块加载
+
+```javascript
+window.addEventListener('moduleLoaded', (event) => {
+    const { name, version, dependencies } = event.detail;
+    console.log(`模块 ${name} v${version} 已加载`);
+    console.log(`依赖: ${dependencies.join(', ')}`);
+});
+```
+
+#### 事件详情结构
+
+```javascript
+{
+    detail: {
+        name: string,           // 模块名称
+        version: string,        // 版本号
+        author: string,         // 作者
+        dependencies: string[]  // 依赖列表
+    }
+}
+```
+
+### 模块列表
+
+| 模块 | 全局变量 | 版本 | 依赖 |
+|------|---------|------|------|
+| GameUtils | `window.GameUtils` | 1.0.2 | 无 |
+| GomokuGame | `window.GomokuGame`, `window.game` | 1.0.2 | GameUtils |
+| SimpleBoardRenderer | `window.SimpleBoardRenderer`, `window.boardRenderer` | 1.0.2 | GomokuGame, GameUtils |
+| GameSaveLoad | `window.GameSaveLoad` | 1.0.2 | GomokuGame, GameUtils |
+| GameReplay | `window.GameReplay` | 1.0.2 | GomokuGame, SimpleBoardRenderer, GameUtils |
+| InterfaceDemo | `window.InterfaceDemo`, `window.demo` | 1.0.2 | GameUtils, GomokuGame, SimpleBoardRenderer |
+
+### 最佳实践
+
+#### 1. 初始化前检查依赖
+
+```javascript
+class CustomModule {
+    constructor() {
+        const check = ModuleDependencyChecker.checkDependencies(['GomokuGame']);
+        if (!check.success) {
+            throw new Error(`初始化失败: ${check.message}`);
+        }
+        // 初始化逻辑
+    }
+}
+```
+
+#### 2. 使用模块加载事件
+
+```javascript
+// 等待特定模块加载完成
+function waitForModule(moduleName) {
+    return new Promise((resolve) => {
+        if (window[moduleName]) {
+            resolve(window[moduleName]);
+        } else {
+            window.addEventListener('moduleLoaded', (event) => {
+                if (event.detail.name === moduleName) {
+                    resolve(window[moduleName]);
+                }
+            });
+        }
+    });
+}
+
+// 使用
+await waitForModule('GomokuGame');
+console.log('GomokuGame 已准备就绪');
+```
+
+#### 3. 版本兼容性检查
+
+```javascript
+// 在关键操作前检查版本
+function ensureCompatibility() {
+    const requiredModules = [
+        { name: 'GomokuGame', minVersion: '1.0.0' },
+        { name: 'GameUtils', minVersion: '1.0.0' }
+    ];
+    
+    requiredModules.forEach(({ name, minVersion }) => {
+        if (!ModuleDependencyChecker.checkVersion(name, minVersion)) {
+            console.warn(`${name} 版本不兼容，需要 ${minVersion} 或更高版本`);
+        }
+    });
+}
+```
+
+---
+
+## 测试和调试
+
+### 模块加载测试页面
+
+项目根目录下的 `test-module-api.html` 提供完整的模块测试界面：
+
+```bash
+# 启动本地服务器
+python -m http.server 8080
+
+# 访问测试页面
+http://localhost:8080/test-module-api.html
+```
+
+测试页面功能：
+- ✅ 模块加载状态检查
+- ✅ 模块版本信息验证
+- ✅ 依赖关系检查
+- ✅ 加载事件监控
+- ✅ 依赖关系可视化
+- ✅ API导出完整性测试
+
+---
+
 更多详细信息请参考源代码中的JSDoc注释。

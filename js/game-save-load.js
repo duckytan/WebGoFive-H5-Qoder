@@ -601,7 +601,25 @@ class GameSaveLoad {
     }
 }
 
+const GAME_SAVE_LOAD_MODULE_INFO = {
+    name: 'GameSaveLoad',
+    version: '1.0.2',
+    author: '项目团队',
+    dependencies: [
+        'GomokuGame',
+        'GameUtils'
+    ]
+};
+
 // 导出到全局作用域
 if (typeof window !== 'undefined') {
-    window.GameSaveLoad = GameSaveLoad;
+    window.GameSaveLoad = Object.assign(GameSaveLoad, { __moduleInfo: GAME_SAVE_LOAD_MODULE_INFO });
+    if (typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('moduleLoaded', {
+            detail: GAME_SAVE_LOAD_MODULE_INFO
+        }));
+    }
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Object.assign(GameSaveLoad, { __moduleInfo: GAME_SAVE_LOAD_MODULE_INFO });
 }
