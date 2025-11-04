@@ -1,7 +1,7 @@
 # H5五子棋游戏
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](./docs/history/VERSION.md)
+[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](./docs/history/VERSION.md)
 
 > 基于 HTML5 Canvas 技术开发的在线五子棋游戏，支持双人对战和人机对战模式
 
@@ -117,9 +117,9 @@ gomoku-game/
 - ✅ **Milestone 1**: 核心游戏引擎 (v0.1.0)
 - ✅ **Milestone 2**: 数据持久化 (v0.2.0)
 - ✅ **Milestone 3**: 禁手规则 (v0.3.0)
-- ⏳ **Milestone 4**: AI系统 (v0.4.0) - 计划中
-- ⏳ **Milestone 5**: 用户体验优化 (v0.5.0) - 计划中
-- ⏳ **Milestone 6**: 测试和发布 (v1.0.0) - 计划中
+- ✅ **Milestone 4**: AI系统 (v1.0.0)
+- ✅ **Milestone 5**: 用户体验优化 (v1.0.1)
+- ⏳ **Milestone 6**: 测试和发布 (v1.1.0) - 进行中
 
 详细进度请查看 [项目总结](./docs/overview/PROJECT_SUMMARY.md)
 
@@ -156,7 +156,7 @@ gomoku-game/
 
 ---
 
-**当前版本**: v0.3.0  
+**当前版本**: v1.0.1  
 **最后更新**: 2025年1月  
 **开发状态**: 🟢 活跃开发中
 

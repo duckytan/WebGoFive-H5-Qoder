@@ -432,17 +432,20 @@ class SimpleBoardRenderer {
     }
     
     drawPieces() {
+        const lastMove = window.game ? window.game.getLastMove() : null;
+        
         for (let y = 0; y < this.boardSize; y++) {
             for (let x = 0; x < this.boardSize; x++) {
                 const piece = this.board[y][x];
                 if (piece !== 0) {
-                    this.drawPiece(x, y, piece);
+                    const isLastMove = lastMove && lastMove.x === x && lastMove.y === y;
+                    this.drawPiece(x, y, piece, isLastMove);
                 }
             }
         }
     }
     
-    drawPiece(x, y, player) {
+    drawPiece(x, y, player, isLastMove = false) {
         const screenX = this.padding + x * this.cellSize;
         const screenY = this.padding + y * this.cellSize;
         const radius = this.cellSize * 0.4;
@@ -494,6 +497,41 @@ class SimpleBoardRenderer {
         this.ctx.fill();
         
         this.ctx.restore();
+        
+        // 最后一步落子的标记
+        if (isLastMove) {
+            this.ctx.save();
+            
+            const glowColor = player === 1 ? 'rgba(255, 214, 64, 0.95)' : 'rgba(255, 128, 171, 0.95)';
+            const pulseRadius = radius * 1.05;
+            const haloRadius = radius * 1.35;
+            
+            // 发光外圈
+            this.ctx.strokeStyle = glowColor;
+            this.ctx.lineWidth = 3;
+            this.ctx.shadowBlur = 16;
+            this.ctx.shadowColor = glowColor;
+            this.ctx.beginPath();
+            this.ctx.arc(screenX, screenY, haloRadius, 0, 2 * Math.PI);
+            this.ctx.stroke();
+            
+            // 内圈光晕
+            const gradient = this.ctx.createRadialGradient(screenX, screenY, radius * 0.2, screenX, screenY, pulseRadius);
+            gradient.addColorStop(0, player === 1 ? 'rgba(255, 245, 157, 0.9)' : 'rgba(255, 205, 210, 0.9)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            this.ctx.fillStyle = gradient;
+            this.ctx.beginPath();
+            this.ctx.arc(screenX, screenY, pulseRadius, 0, 2 * Math.PI);
+            this.ctx.fill();
+            
+            // 中心脉冲点
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            this.ctx.beginPath();
+            this.ctx.arc(screenX, screenY, radius * 0.16, 0, 2 * Math.PI);
+            this.ctx.fill();
+            
+            this.ctx.restore();
+        }
     }
     
     drawHoverPreview() {
