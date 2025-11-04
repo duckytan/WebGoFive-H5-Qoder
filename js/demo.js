@@ -125,13 +125,14 @@ class InterfaceDemo {
         });
         
         this.currentPlayer = 1; // 1为黑棋，2为白棋
-        this.gameMode = 'PvE'; // PvP或PvE
+        this.gameMode = 'PvE'; // PvP、PvE或EvE
         this.moveCount = 0;
         this.gameTime = 0;
         this.timeInterval = null;
         this.aiThinking = false;
         this.aiTimer = null;
         this.hintResetTimer = null;
+        this.eveAutoPlay = false; // EvE模式自动对战标志
         
         // 禁手提示配置
         this.forbiddenPromptConfig = {
@@ -312,6 +313,24 @@ class InterfaceDemo {
             });
             this.setAIDifficulty(aiDifficultySelect.value);
         }
+        
+        // EvE模式黑方AI难度
+        const blackAIDifficultySelect = document.getElementById('black-ai-difficulty');
+        if (blackAIDifficultySelect) {
+            blackAIDifficultySelect.addEventListener('change', (e) => {
+                this.setBlackAIDifficulty(e.target.value);
+            });
+            this.setBlackAIDifficulty(blackAIDifficultySelect.value);
+        }
+        
+        // EvE模式白方AI难度
+        const whiteAIDifficultySelect = document.getElementById('white-ai-difficulty');
+        if (whiteAIDifficultySelect) {
+            whiteAIDifficultySelect.addEventListener('change', (e) => {
+                this.setWhiteAIDifficulty(e.target.value);
+            });
+            this.setWhiteAIDifficulty(whiteAIDifficultySelect.value);
+        }
     }
     
     setAIDifficulty(difficulty) {
@@ -325,6 +344,28 @@ class InterfaceDemo {
         }
     }
     
+    setBlackAIDifficulty(difficulty) {
+        if (window.game) {
+            window.game.setBlackAIDifficulty(difficulty);
+            this.updateHintMessage(`黑方AI难度已设置为: ${this.getDifficultyLabel(difficulty)}`);
+            if (this.gameMode === 'EvE') {
+                this.updateGameStatus();
+            }
+            console.log(`[Demo] 黑方AI难度设置为: ${difficulty}`);
+        }
+    }
+    
+    setWhiteAIDifficulty(difficulty) {
+        if (window.game) {
+            window.game.setWhiteAIDifficulty(difficulty);
+            this.updateHintMessage(`白方AI难度已设置为: ${this.getDifficultyLabel(difficulty)}`);
+            if (this.gameMode === 'EvE') {
+                this.updateGameStatus();
+            }
+            console.log(`[Demo] 白方AI难度设置为: ${difficulty}`);
+        }
+    }
+    
     getDifficultyLabel(difficulty) {
         const labels = {
             'BEGINNER': '新手',
@@ -335,15 +376,22 @@ class InterfaceDemo {
         return labels[difficulty] || difficulty;
     }
     
-    getAIThinkingDuration() {
-        const difficulty = window.game?.aiDifficulty || 'NORMAL';
+    getAIDifficultyForPlayer(player) {
+        if (this.gameMode === 'EvE' && window.game) {
+            return player === 1 ? window.game.blackAIDifficulty : window.game.whiteAIDifficulty;
+        }
+        return window.game?.aiDifficulty || 'NORMAL';
+    }
+    
+    getAIThinkingDuration(difficulty) {
+        const level = difficulty || window.game?.aiDifficulty || 'NORMAL';
         const durations = {
             'BEGINNER': 700,
             'NORMAL': 1200,
             'HARD': 1800,
             'HELL': 2400
         };
-        return durations[difficulty] || 1200;
+        return durations[level] || 1200;
     }
     
     finishAIThinking() {
@@ -364,6 +412,9 @@ class InterfaceDemo {
     
     canPlacePiece() {
         if (window.game && window.game.gameStatus === 'finished') {
+            return false;
+        }
+        if (this.gameMode === 'EvE') {
             return false;
         }
         if (this.gameMode === 'PvE') {
@@ -396,9 +447,15 @@ class InterfaceDemo {
         this.moveCount = 0;
         this.currentPlayer = 1;
         this.gameTime = 0;
+        this.eveAutoPlay = false;
         
         this.updateGameStatus();
-        this.updateHintMessage('新游戏开始！黑棋先手');
+        
+        if (this.gameMode === 'EvE') {
+            this.updateHintMessage('机机对战模式开始！观看AI对决');
+        } else {
+            this.updateHintMessage('新游戏开始！黑棋先手');
+        }
         
         // 重置棋盘渲染
         if (window.boardRenderer) {
@@ -420,6 +477,24 @@ class InterfaceDemo {
         }
         
         console.log('[Demo] 开始新游戏');
+        
+        // EvE模式自动开始AI对战
+        if (this.gameMode === 'EvE') {
+            this.eveAutoPlay = true;
+            this.startEveAutoPlay();
+        }
+    }
+    
+    startEveAutoPlay() {
+        if (!this.eveAutoPlay) {
+            return;
+        }
+        this.cancelAIThinking();
+        setTimeout(() => {
+            if (this.eveAutoPlay && this.gameMode === 'EvE' && window.game && window.game.gameStatus !== 'finished') {
+                this.simulateAIThinking();
+            }
+        }, 800);
     }
     
     undoMove() {
@@ -495,7 +570,7 @@ class InterfaceDemo {
         const saveBtn = document.getElementById('save-game-btn');
         const replayBtn = document.getElementById('replay-btn');
         
-        if (undoBtn) undoBtn.disabled = false;
+        if (undoBtn) undoBtn.disabled = this.gameMode === 'EvE';
         if (saveBtn) saveBtn.disabled = false;
         if (replayBtn) replayBtn.disabled = false;
         
@@ -508,6 +583,11 @@ class InterfaceDemo {
         if (result.gameOver && this.gameSaveLoad) {
             this.gameSaveLoad.clearAutoSave();
             console.log('[Demo] 游戏结束，已清除自动保存');
+        }
+        
+        // 如果游戏结束，停止EvE自动对战
+        if (result.gameOver && this.gameMode === 'EvE') {
+            this.eveAutoPlay = false;
         }
         
         // 如果是PvE模式且轮到AI
@@ -584,28 +664,61 @@ class InterfaceDemo {
     
     toggleGameMode() {
         this.addButtonClickEffect('mode-toggle-btn');
-        this.gameMode = this.gameMode === 'PvP' ? 'PvE' : 'PvP';
+        
+        // 三种模式循环切换: PvE -> PvP -> EvE -> PvE
+        if (this.gameMode === 'PvE') {
+            this.gameMode = 'PvP';
+        } else if (this.gameMode === 'PvP') {
+            this.gameMode = 'EvE';
+        } else {
+            this.gameMode = 'PvE';
+        }
         
         // 同步到游戏核心
         if (window.game) {
             window.game.setGameMode(this.gameMode);
         }
         
+        if (this.gameMode !== 'EvE') {
+            this.eveAutoPlay = false;
+            this.cancelAIThinking();
+        }
+        
         this.updateModeDisplay();
-        this.updateHintMessage(`已切换到${this.gameMode === 'PvP' ? '双人对战' : '人机对战'}模式`);
+        
+        const modeNames = {
+            'PvP': '双人对战',
+            'PvE': '人机对战',
+            'EvE': '机机对战'
+        };
+        this.updateHintMessage(`已切换到${modeNames[this.gameMode]}模式`);
         console.log(`[Demo] 切换到${this.gameMode}模式`);
     }
     
     updateModeDisplay() {
         const modeToggleText = document.getElementById('mode-toggle-text');
         const aiControls = document.getElementById('ai-controls');
+        const pveSetting = document.getElementById('pve-ai-setting');
+        const eveSettings = document.getElementById('eve-ai-settings');
         
-        if (this.gameMode === 'PvE') {
-            if (modeToggleText) modeToggleText.textContent = '切换到PvP';
-            if (aiControls) aiControls.style.display = 'block';
-        } else {
-            if (modeToggleText) modeToggleText.textContent = '切换到PvE';
-            if (aiControls) aiControls.style.display = 'none';
+        const nextMode = this.gameMode === 'PvE' ? 'PvP' : (this.gameMode === 'PvP' ? 'EvE' : 'PvE');
+        const modeLabels = {
+            'PvP': '双人对战',
+            'PvE': '人机对战',
+            'EvE': '机机对战'
+        };
+        if (modeToggleText) {
+            modeToggleText.textContent = `切换到${modeLabels[nextMode]}`;
+        }
+        
+        if (aiControls) {
+            aiControls.style.display = this.gameMode === 'PvP' ? 'none' : 'block';
+        }
+        if (pveSetting) {
+            pveSetting.style.display = this.gameMode === 'PvE' ? 'block' : 'none';
+        }
+        if (eveSettings) {
+            eveSettings.style.display = this.gameMode === 'EvE' ? 'grid' : 'none';
         }
         
         this.updateGameStatus();
@@ -629,6 +742,12 @@ class InterfaceDemo {
         if (window.game.gameStatus === 'finished') {
             this.updateHintMessage('⚠️ 游戏已结束，无法获取提示');
             console.warn('[Demo] 游戏已结束，无法获取提示');
+            return;
+        }
+        
+        if (this.gameMode === 'EvE') {
+            this.updateHintMessage('⚠️ 机机对战模式，无需获取提示');
+            console.warn('[Demo] EvE模式，无需提示');
             return;
         }
         
@@ -747,17 +866,14 @@ class InterfaceDemo {
             aiThinking.style.display = 'block';
         }
         
-        this.updateHintMessage('AI思考中...');
-        console.log('[Demo] AI开始思考...');
+        const currentPlayer = window.game?.currentPlayer || 2;
+        const thinkerLabel = this.gameMode === 'EvE' ? (currentPlayer === 1 ? '黑方AI' : '白方AI') : 'AI';
+        this.updateHintMessage(`${thinkerLabel}思考中...`);
+        console.log(`[Demo] ${thinkerLabel}开始思考...`);
         
         // 模拟AI思考时间（根据难度调整）
-        const difficulty = window.game?.aiDifficulty || 'NORMAL';
-        const thinkingTime = {
-            'BEGINNER': 800,
-            'NORMAL': 1200,
-            'HARD': 1800,
-            'HELL': 2500
-        }[difficulty] || 1200;
+        const difficulty = this.getAIDifficultyForPlayer(currentPlayer);
+        const thinkingTime = this.getAIThinkingDuration(difficulty);
         
         this.aiTimer = setTimeout(() => {
             if (!window.game) {
@@ -805,7 +921,7 @@ class InterfaceDemo {
                 const saveBtn = document.getElementById('save-game-btn');
                 const replayBtn = document.getElementById('replay-btn');
                 
-                if (undoBtn) undoBtn.disabled = false;
+                if (undoBtn) undoBtn.disabled = this.gameMode === 'EvE';
                 if (saveBtn) saveBtn.disabled = false;
                 if (replayBtn) replayBtn.disabled = false;
                 
@@ -823,7 +939,20 @@ class InterfaceDemo {
                         window.boardRenderer.handleGameOver(result);
                     }
                 } else {
-                    this.updateHintMessage('AI已落子，轮到您了');
+                    if (this.gameMode === 'EvE') {
+                        const nextPlayer = this.currentPlayer === 1 ? '黑方AI' : '白方AI';
+                        this.updateHintMessage(`AI已落子，轮到${nextPlayer}`);
+                        
+                        if (this.eveAutoPlay) {
+                            setTimeout(() => {
+                                if (this.eveAutoPlay && window.game && window.game.gameStatus !== 'finished') {
+                                    this.simulateAIThinking();
+                                }
+                            }, 300);
+                        }
+                    } else {
+                        this.updateHintMessage('AI已落子，轮到您了');
+                    }
                 }
                 
                 console.log('[Demo] AI落子完成');
@@ -885,6 +1014,9 @@ class InterfaceDemo {
             if (resultMessage) {
                 if (this.gameMode === 'PvE') {
                     resultMessage.textContent = '恭喜，你赢了！';
+                } else if (this.gameMode === 'EvE') {
+                    const blackDiff = window.game?.blackAIDifficulty || 'NORMAL';
+                    resultMessage.textContent = `黑方AI（${this.getDifficultyLabel(blackDiff)}）获得胜利！`;
                 } else {
                     resultMessage.textContent = '黑棋五子连珠，赢得了这局游戏！';
                 }
@@ -901,6 +1033,9 @@ class InterfaceDemo {
             if (resultMessage) {
                 if (this.gameMode === 'PvE') {
                     resultMessage.textContent = '很遗憾，AI赢了这局，再接再厉！';
+                } else if (this.gameMode === 'EvE') {
+                    const whiteDiff = window.game?.whiteAIDifficulty || 'NORMAL';
+                    resultMessage.textContent = `白方AI（${this.getDifficultyLabel(whiteDiff)}）获得胜利！`;
                 } else {
                     resultMessage.textContent = '白棋五子连珠，赢得了这局游戏！';
                 }
@@ -990,7 +1125,11 @@ class InterfaceDemo {
         }
         
         if (playerName) {
-            playerName.textContent = this.currentPlayer === 1 ? '黑棋' : '白棋';
+            if (this.gameMode === 'EvE') {
+                playerName.textContent = this.currentPlayer === 1 ? '黑方AI' : '白方AI';
+            } else {
+                playerName.textContent = this.currentPlayer === 1 ? '黑棋' : '白棋';
+            }
         }
         
         if (moveCountDisplay) {
@@ -1002,6 +1141,12 @@ class InterfaceDemo {
                 const difficulty = window.game?.aiDifficulty || 'NORMAL';
                 const difficultyLabel = this.getDifficultyLabel(difficulty);
                 gameModeDisplay.textContent = `人机对战 (${difficultyLabel})`;
+            } else if (this.gameMode === 'EvE') {
+                const blackDiff = window.game?.blackAIDifficulty || 'NORMAL';
+                const whiteDiff = window.game?.whiteAIDifficulty || 'NORMAL';
+                const blackLabel = this.getDifficultyLabel(blackDiff);
+                const whiteLabel = this.getDifficultyLabel(whiteDiff);
+                gameModeDisplay.textContent = `机机对战 (黑:${blackLabel} vs 白:${whiteLabel})`;
             } else {
                 gameModeDisplay.textContent = '双人对战';
             }
