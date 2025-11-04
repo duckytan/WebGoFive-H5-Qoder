@@ -603,7 +603,7 @@ class GameSaveLoad {
 
 const GAME_SAVE_LOAD_MODULE_INFO = {
     name: 'GameSaveLoad',
-    version: '1.0.2',
+    version: '1.0.3',
     author: '项目团队',
     dependencies: [
         'GomokuGame',

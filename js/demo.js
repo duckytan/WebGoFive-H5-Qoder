@@ -1221,7 +1221,7 @@ class InterfaceDemo {
 
 const INTERFACE_DEMO_MODULE_INFO = {
     name: 'InterfaceDemo',
-    version: '1.0.2',
+    version: '1.0.3',
     author: '项目团队',
     dependencies: INTERFACE_DEMO_REQUIRED_MODULES
 };
