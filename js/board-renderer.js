@@ -77,6 +77,14 @@ class SimpleBoardRenderer {
     
     setupEventListeners() {
         this.canvas.addEventListener('click', (e) => {
+            // EvE模式下禁止玩家操作
+            if (window.game && window.game.gameMode === 'EvE') {
+                if (window.demo && window.demo.updateHintMessage) {
+                    window.demo.updateHintMessage('⚠️ 机机对战模式，玩家无法操作棋盘');
+                }
+                return;
+            }
+            
             const rect = this.canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
@@ -129,6 +137,13 @@ class SimpleBoardRenderer {
         // 调用游戏核心引擎的落子方法
         if (!window.game) {
             console.error('[BoardRenderer] 游戏核心引擎未加载');
+            return;
+        }
+        
+        if (window.demo && typeof window.demo.canPlacePiece === 'function' && !window.demo.canPlacePiece()) {
+            if (window.demo.gameMode === 'EvE' && typeof window.demo.updateHintMessage === 'function') {
+                window.demo.updateHintMessage('⚠️ 机机对战模式，玩家无法操作棋盘');
+            }
             return;
         }
         
@@ -662,7 +677,7 @@ class SimpleBoardRenderer {
 
 const BOARD_RENDERER_MODULE_INFO = {
     name: 'SimpleBoardRenderer',
-    version: '1.0.2',
+    version: '1.0.3',
     author: '项目团队',
     dependencies: [
         'GomokuGame',

@@ -4,6 +4,118 @@
 
 ---
 
+## [1.0.3] - 2025-01-04
+
+### ✨ 新增功能
+
+#### 1. EvE机机对战模式 🤖⚔️🤖
+全新的观战模式，让两个AI互相对决：
+
+- **双AI对战系统**
+  - 黑方AI和白方AI可独立设置难度级别
+  - 支持4种难度组合：新手、正常、困难、地狱
+  - 可观看不同难度AI之间的精彩对决
+  - 实现真实的AI智能对抗，不是演示动画
+
+- **完整的观战体验**
+  - 玩家完全无法操作棋盘，纯观战模式
+  - 实时显示当前思考的AI方（黑方AI/白方AI）
+  - 显示双方AI的难度设置（如：黑:困难 vs 白:地狱）
+  - AI落子后自动继续下一步，直到游戏结束
+  - 游戏结束显示获胜AI及其难度
+
+- **智能游戏控制**
+  - 新游戏时自动启动AI对战
+  - EvE模式下自动禁用悔棋功能
+  - EvE模式下禁用提示功能（无需提示）
+  - 点击棋盘显示友好提示信息
+  - 支持保存和回放EvE对局
+
+- **三模式循环切换**
+  - 模式切换按钮支持三种模式循环：PvE → PvP → EvE → PvE
+  - 每种模式显示清晰的名称：人机对战、双人对战、机机对战
+  - 切换到EvE模式时停止其他AI思考
+  - 自动显示/隐藏相应的AI设置面板
+
+#### 2. AI设置面板优化
+- **PvE模式**：显示单个"AI难度"选择器
+- **EvE模式**：显示"黑方AI"和"白方AI"两个独立选择器
+- **PvP模式**：隐藏所有AI设置
+- 设置面板根据模式自动切换显示
+
+### 🔧 技术实现
+
+#### 游戏核心增强 (game-core.js)
+- 新增 `blackAIDifficulty` 和 `whiteAIDifficulty` 属性
+- 新增 `setBlackAIDifficulty()` 方法
+- 新增 `setWhiteAIDifficulty()` 方法
+- `setGameMode()` 支持 'EvE' 模式
+- `getAIMove()` 根据当前玩家选择对应AI难度
+- `getGameInfo()` 返回双AI难度信息
+
+#### 界面控制增强 (demo.js)
+- 新增 `eveAutoPlay` 标志控制自动对战
+- 新增 `startEveAutoPlay()` 方法启动自动对战
+- 新增 `setBlackAIDifficulty()` 和 `setWhiteAIDifficulty()` 方法
+- 新增 `getAIDifficultyForPlayer()` 方法获取玩家对应AI难度
+- `toggleGameMode()` 实现三模式循环切换
+- `updateModeDisplay()` 智能显示/隐藏AI设置面板
+- `updateGameStatus()` 显示EvE模式双AI难度
+- `canPlacePiece()` 在EvE模式返回false
+- `simulateAIThinking()` 支持EvE模式自动连续落子
+- `showGameResult()` 显示EvE模式获胜AI信息
+
+#### 棋盘渲染优化 (board-renderer.js)
+- `setupEventListeners()` 在EvE模式阻止点击事件
+- `placePiece()` 调用 `canPlacePiece()` 双重检查
+- 点击时显示友好的提示信息
+
+### 🎯 用户体验优化
+
+- **清晰的模式标识**
+  - 当前玩家显示为"黑方AI"/"白方AI"（EvE模式）
+  - 游戏状态显示完整难度信息：机机对战 (黑:正常 vs 白:困难)
+  - AI思考提示显示具体AI方：黑方AI思考中...
+
+- **合理的功能禁用**
+  - EvE模式禁用悔棋按钮（避免干扰AI对战）
+  - EvE模式禁用提示功能（无意义）
+  - 玩家点击棋盘时显示提示而非静默
+
+- **流畅的对战体验**
+  - AI落子间隔根据难度自动调整（700ms-2400ms）
+  - 思考提示清晰显示当前AI方
+  - 自动连续对战直到分出胜负
+
+### 📊 统计数据
+
+- **新增代码**: 约300行核心功能代码
+- **修改文件**: 4个核心文件 (index.html, game-core.js, demo.js, board-renderer.js)
+- **新增AI方法**: 3个 (setBlackAIDifficulty, setWhiteAIDifficulty, getAIDifficultyForPlayer)
+- **新增UI方法**: 2个 (startEveAutoPlay, setBlackAIDifficulty, setWhiteAIDifficulty)
+- **游戏模式**: 从2种增加到3种 (+50%)
+
+### 🎮 使用方法
+
+1. 点击"切换模式"按钮，切换到"机机对战"模式
+2. 在AI设置面板分别选择黑方AI和白方AI的难度
+3. 点击"新游戏"按钮，AI对战自动开始
+4. 观看两个AI的精彩对决
+5. 游戏结束后查看获胜AI
+
+### 🔗 模式对比
+
+| 特性 | PvP | PvE | EvE |
+|------|-----|-----|-----|
+| 玩家操作 | ✅ | ✅ | ❌ |
+| AI参与 | ❌ | ✅ (白方) | ✅ (双方) |
+| AI难度设置 | - | 1个 | 2个 |
+| 悔棋 | ✅ | ✅ | ❌ |
+| 提示 | ✅ | ✅ | ❌ |
+| 自动对战 | ❌ | ❌ | ✅ |
+
+---
+
 ## [1.0.2] - 2025-01-04
 
 ### ✨ 新增功能

@@ -61,11 +61,15 @@ class GomokuGame {
         // 游戏结束时间
         this.endTime = null;
         
-        // 游戏模式：PvP=双人对战，PvE=人机对战
+        // 游戏模式：PvP=双人对战，PvE=人机对战，EvE=机机对战
         this.gameMode = 'PvP';
         
-        // AI难度（仅PvE模式）
+        // AI难度（PvE模式）
         this.aiDifficulty = 'NORMAL';
+        
+        // EvE模式的双AI难度设置
+        this.blackAIDifficulty = 'NORMAL';
+        this.whiteAIDifficulty = 'NORMAL';
         
         console.log('[GameCore] 游戏核心引擎已初始化');
     }
@@ -611,10 +615,10 @@ class GomokuGame {
     
     /**
      * 设置游戏模式
-     * @param {string} mode - 游戏模式：PvP或PvE
+     * @param {string} mode - 游戏模式：PvP、PvE或EvE
      */
     setGameMode(mode) {
-        if (mode !== 'PvP' && mode !== 'PvE') {
+        if (mode !== 'PvP' && mode !== 'PvE' && mode !== 'EvE') {
             console.error('[GameCore] 无效的游戏模式:', mode);
             return;
         }
@@ -624,7 +628,37 @@ class GomokuGame {
     }
     
     /**
-     * 设置AI难度
+     * 设置EvE模式下黑方AI难度
+     * @param {string} difficulty - 难度：BEGINNER/NORMAL/HARD/HELL
+     */
+    setBlackAIDifficulty(difficulty) {
+        const validDifficulties = ['BEGINNER', 'NORMAL', 'HARD', 'HELL'];
+        if (!validDifficulties.includes(difficulty)) {
+            console.error('[GameCore] 无效的黑方AI难度:', difficulty);
+            return;
+        }
+        
+        this.blackAIDifficulty = difficulty;
+        console.log(`[GameCore] 黑方AI难度设置为: ${difficulty}`);
+    }
+    
+    /**
+     * 设置EvE模式下白方AI难度
+     * @param {string} difficulty - 难度：BEGINNER/NORMAL/HARD/HELL
+     */
+    setWhiteAIDifficulty(difficulty) {
+        const validDifficulties = ['BEGINNER', 'NORMAL', 'HARD', 'HELL'];
+        if (!validDifficulties.includes(difficulty)) {
+            console.error('[GameCore] 无效的白方AI难度:', difficulty);
+            return;
+        }
+        
+        this.whiteAIDifficulty = difficulty;
+        console.log(`[GameCore] 白方AI难度设置为: ${difficulty}`);
+    }
+    
+    /**
+     * 设置AI难度（PvE模式白方AI）
      * @param {string} difficulty - 难度：BEGINNER/NORMAL/HARD/HELL
      */
     setAIDifficulty(difficulty) {
@@ -635,6 +669,7 @@ class GomokuGame {
         }
         
         this.aiDifficulty = difficulty;
+        this.whiteAIDifficulty = difficulty;
         console.log(`[GameCore] AI难度设置为: ${difficulty}`);
     }
     
@@ -654,6 +689,8 @@ class GomokuGame {
             duration: duration,
             gameMode: this.gameMode,
             aiDifficulty: this.aiDifficulty,
+            blackAIDifficulty: this.blackAIDifficulty,
+            whiteAIDifficulty: this.whiteAIDifficulty,
             startTime: this.startTime,
             endTime: this.endTime
         };
@@ -749,10 +786,16 @@ class GomokuGame {
             return null;
         }
         
-        console.log(`[GameCore AI] 开始思考，难度: ${this.aiDifficulty}`);
+        // 根据游戏模式选择AI难度
+        let difficulty = this.aiDifficulty;
+        if (this.gameMode === 'EvE') {
+            difficulty = this.currentPlayer === 1 ? this.blackAIDifficulty : this.whiteAIDifficulty;
+        }
+        
+        console.log(`[GameCore AI] 开始思考，玩家: ${this.currentPlayer === 1 ? '黑方' : '白方'}，难度: ${difficulty}`);
         
         // 根据难度选择策略
-        switch (this.aiDifficulty) {
+        switch (difficulty) {
             case 'BEGINNER':
                 return this.getAIMoveRandom();
             case 'NORMAL':
@@ -1527,7 +1570,7 @@ class GomokuGame {
 
 const GAME_CORE_MODULE_INFO = {
     name: 'GomokuGame',
-    version: '1.0.2',
+    version: '1.0.3',
     author: '项目团队',
     dependencies: [
         'GameUtils'

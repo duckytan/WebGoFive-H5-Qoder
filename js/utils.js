@@ -278,7 +278,7 @@ const GameUtils = {
 
 const GAME_UTILS_MODULE_INFO = {
     name: 'GameUtils',
-    version: '1.0.2',
+    version: '1.0.3',
     author: '项目团队',
     dependencies: []
 };

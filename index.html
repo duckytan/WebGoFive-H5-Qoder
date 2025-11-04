@@ -18,7 +18,7 @@
                 <h1 class="game-title">
                     <span class="title-icon">🏁</span>
                     H5五子棋
-                    <span class="version-badge">v1.0.2</span>
+                    <span class="version-badge">v1.0.3</span>
                 </h1>
                 <div class="header-controls">
                     <button type="button" class="btn btn--icon" id="hint-btn" aria-label="获取提示" title="获取提示 (H)">
@@ -82,7 +82,7 @@
                         </button>
                         <button type="button" class="btn btn--secondary" id="mode-toggle-btn">
                             <span class="icon">🔄</span>
-                            <span id="mode-toggle-text">切换到PvP</span>
+                            <span id="mode-toggle-text">切换模式</span>
                         </button>
                     </div>
                     
@@ -107,18 +107,40 @@
                     <input type="file" id="load-game-input" accept=".json" style="display: none;">
                 </div>
 
-                <!-- AI相关控制 (PvE模式时显示) -->
+                <!-- AI相关控制 (PvE/EvE模式时显示) -->
                 <div class="ai-controls" id="ai-controls">
                     <h3 class="section-title">AI设置</h3>
                     <div class="ai-settings">
-                        <div class="setting-item">
-                            <label for="ai-difficulty">难度级别:</label>
+                        <!-- PvE模式下的AI难度设置 -->
+                        <div class="setting-item" id="pve-ai-setting">
+                            <label for="ai-difficulty">AI难度:</label>
                             <select id="ai-difficulty" class="select">
                                 <option value="BEGINNER">新手</option>
                                 <option value="NORMAL" selected>正常</option>
                                 <option value="HARD">困难</option>
                                 <option value="HELL">地狱</option>
                             </select>
+                        </div>
+                        <!-- EvE模式下的双AI难度设置 -->
+                        <div class="eve-ai-settings" id="eve-ai-settings" style="display: none;">
+                            <div class="setting-item">
+                                <label for="black-ai-difficulty">黑方AI:</label>
+                                <select id="black-ai-difficulty" class="select">
+                                    <option value="BEGINNER">新手</option>
+                                    <option value="NORMAL" selected>正常</option>
+                                    <option value="HARD">困难</option>
+                                    <option value="HELL">地狱</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="white-ai-difficulty">白方AI:</label>
+                                <select id="white-ai-difficulty" class="select">
+                                    <option value="BEGINNER">新手</option>
+                                    <option value="NORMAL" selected>正常</option>
+                                    <option value="HARD">困难</option>
+                                    <option value="HELL">地狱</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="ai-thinking" id="ai-thinking" style="display: none;">
                             <div class="thinking-indicator">
@@ -317,6 +339,7 @@
                                 <select id="default-mode" class="select">
                                     <option value="PvP">双人对战</option>
                                     <option value="PvE" selected>人机对战</option>
+                                    <option value="EvE">机机对战</option>
                                 </select>
                             </div>
                             <div class="setting-item">

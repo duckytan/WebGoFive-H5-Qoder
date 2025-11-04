@@ -777,7 +777,7 @@ class GameReplay {
 
 const GAME_REPLAY_MODULE_INFO = {
     name: 'GameReplay',
-    version: '1.0.2',
+    version: '1.0.3',
     author: '项目团队',
     dependencies: [
         'GomokuGame',
