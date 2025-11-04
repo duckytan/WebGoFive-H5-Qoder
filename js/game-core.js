@@ -1527,7 +1527,7 @@ class GomokuGame {
 
 const GAME_CORE_MODULE_INFO = {
     name: 'GomokuGame',
-    version: '1.0.1',
+    version: '1.0.2',
     author: '项目团队',
     dependencies: [
         'GameUtils'

@@ -662,7 +662,7 @@ class SimpleBoardRenderer {
 
 const BOARD_RENDERER_MODULE_INFO = {
     name: 'SimpleBoardRenderer',
-    version: '1.0.1',
+    version: '1.0.2',
     author: '项目团队',
     dependencies: [
         'GomokuGame',

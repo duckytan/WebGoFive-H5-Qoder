@@ -655,7 +655,7 @@ class CustomAI extends AIEngine {
 
 ---
 
-## 模块系统 (v1.0.1新增)
+## 模块系统 (v1.0.2新增)
 
 ### 模块元信息
 
@@ -789,12 +789,12 @@ window.addEventListener('moduleLoaded', (event) => {
 
 | 模块 | 全局变量 | 版本 | 依赖 |
 |------|---------|------|------|
-| GameUtils | `window.GameUtils` | 1.0.1 | 无 |
-| GomokuGame | `window.GomokuGame`, `window.game` | 1.0.1 | GameUtils |
-| SimpleBoardRenderer | `window.SimpleBoardRenderer`, `window.boardRenderer` | 1.0.1 | GomokuGame, GameUtils |
-| GameSaveLoad | `window.GameSaveLoad` | 1.0.1 | GomokuGame, GameUtils |
-| GameReplay | `window.GameReplay` | 1.0.1 | GomokuGame, SimpleBoardRenderer, GameUtils |
-| InterfaceDemo | `window.InterfaceDemo`, `window.demo` | 1.0.1 | GameUtils, GomokuGame, SimpleBoardRenderer |
+| GameUtils | `window.GameUtils` | 1.0.2 | 无 |
+| GomokuGame | `window.GomokuGame`, `window.game` | 1.0.2 | GameUtils |
+| SimpleBoardRenderer | `window.SimpleBoardRenderer`, `window.boardRenderer` | 1.0.2 | GomokuGame, GameUtils |
+| GameSaveLoad | `window.GameSaveLoad` | 1.0.2 | GomokuGame, GameUtils |
+| GameReplay | `window.GameReplay` | 1.0.2 | GomokuGame, SimpleBoardRenderer, GameUtils |
+| InterfaceDemo | `window.InterfaceDemo`, `window.demo` | 1.0.2 | GameUtils, GomokuGame, SimpleBoardRenderer |
 
 ### 最佳实践
 
