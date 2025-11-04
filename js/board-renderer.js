@@ -660,7 +660,17 @@ class SimpleBoardRenderer {
     }
 }
 
-// 在页面加载完成后初始化棋盘渲染器
+// 导出类到全局作用域（支持多实例创建）
+if (typeof window !== 'undefined') {
+    window.SimpleBoardRenderer = SimpleBoardRenderer;
+}
+
+// 支持CommonJS模块导出
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SimpleBoardRenderer;
+}
+
+// 在页面加载完成后初始化默认棋盘渲染器实例
 document.addEventListener('DOMContentLoaded', () => {
     // 等待一小段时间确保所有元素都已加载
     setTimeout(() => {
@@ -672,5 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         console.log('棋盘渲染器已初始化并绑定到全局变量');
+        console.log('SimpleBoardRenderer 类构造函数已导出到 window 对象');
     }, 100);
 });
