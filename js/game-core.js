@@ -866,7 +866,7 @@ class GomokuGame {
     }
     
     /**
-     * 正常难度AI：基于评分系统的策略
+     * 正常难度AI：基于评分系统的策略 + 双威胁防守
      */
     getAIMoveNormal() {
         const aiPlayer = this.currentPlayer;
@@ -886,7 +886,14 @@ class GomokuGame {
             return blockMove;
         }
         
-        // 3. 使用评分系统选择最佳落点
+        // 3. 优先阻止对手的必胜威胁
+        const urgentDefense = this.findCriticalDefenseMove(opponentPlayer);
+        if (urgentDefense) {
+            console.log(`[GameCore AI-NORMAL] 阻止对手双威胁: (${urgentDefense.x}, ${urgentDefense.y})`);
+            return urgentDefense;
+        }
+        
+        // 4. 使用评分系统选择最佳落点
         const bestMove = this.evaluateAllMoves(aiPlayer, opponentPlayer, 2);
         if (bestMove) {
             console.log(`[GameCore AI-NORMAL] 评分最高落点: (${bestMove.x}, ${bestMove.y}), 评分: ${bestMove.score.toFixed?.(2) ?? bestMove.score}`);
@@ -897,7 +904,7 @@ class GomokuGame {
     }
     
     /**
-     * 困难难度AI：使用Minimax搜索
+     * 困难难度AI：使用Minimax搜索 + 基础威胁检测
      */
     getAIMoveHard() {
         const aiPlayer = this.currentPlayer;
@@ -917,7 +924,14 @@ class GomokuGame {
             return blockMove;
         }
         
-        // 3. 使用Minimax搜索（深度2）
+        // 3. 检测并阻止对手的双威胁
+        const urgentDefense = this.findCriticalDefenseMove(opponentPlayer);
+        if (urgentDefense) {
+            console.log(`[GameCore AI-HARD] 阻止对手必胜威胁: (${urgentDefense.x}, ${urgentDefense.y})`);
+            return urgentDefense;
+        }
+        
+        // 4. 使用Minimax搜索（深度2）
         const bestMove = this.minimaxSearch(aiPlayer, opponentPlayer, 2);
         if (bestMove) {
             console.log(`[GameCore AI-HARD] Minimax最佳落点: (${bestMove.x}, ${bestMove.y}), 评分: ${bestMove.score}`);
@@ -928,7 +942,7 @@ class GomokuGame {
     }
     
     /**
-     * 地狱难度AI：使用Alpha-Beta剪枝的深度搜索
+     * 地狱难度AI：使用Alpha-Beta剪枝的深度搜索 + VCF搜索
      */
     getAIMoveHell() {
         const aiPlayer = this.currentPlayer;
@@ -948,7 +962,28 @@ class GomokuGame {
             return blockMove;
         }
         
-        // 3. 使用Alpha-Beta剪枝搜索（深度3）
+        // 3. VCF搜索（连续冲四必胜）
+        const vcfMove = this.findVCFMove(aiPlayer);
+        if (vcfMove) {
+            console.log(`[GameCore AI-HELL] 找到VCF必胜序列: (${vcfMove.x}, ${vcfMove.y})`);
+            return vcfMove;
+        }
+        
+        // 4. 检测对手的VCF威胁
+        const vcfDefense = this.findVCFMove(opponentPlayer, true);
+        if (vcfDefense) {
+            console.log(`[GameCore AI-HELL] 阻止对手VCF: (${vcfDefense.x}, ${vcfDefense.y})`);
+            return vcfDefense;
+        }
+        
+        // 5. 检测双威胁（如双活三）进行防守
+        const urgentDefense = this.findCriticalDefenseMove(opponentPlayer);
+        if (urgentDefense) {
+            console.log(`[GameCore AI-HELL] 阻止对手必胜威胁: (${urgentDefense.x}, ${urgentDefense.y})`);
+            return urgentDefense;
+        }
+        
+        // 6. 使用Alpha-Beta剪枝搜索（深度3）
         const bestMove = this.alphaBetaSearch(aiPlayer, opponentPlayer, 3);
         if (bestMove) {
             console.log(`[GameCore AI-HELL] Alpha-Beta最佳落点: (${bestMove.x}, ${bestMove.y}), 评分: ${bestMove.score}`);
@@ -1566,11 +1601,301 @@ class GomokuGame {
             evaluationBoost: 25
         });
     }
+    
+    /**
+     * VCF搜索（Victory by Continuous Four）- 连续冲四必胜搜索
+     * @param {number} player - 玩家标识
+     * @param {boolean} defenseMode - 是否是防守模式（寻找防守点）
+     * @param {number} maxDepth - 最大搜索深度
+     * @returns {Object|null} 返回VCF落点或null
+     */
+    findVCFMove(player, defenseMode = false, maxDepth = 6) {
+        // VCF搜索：通过连续冲四强制对手防守，最终形成活四或五连
+        const opponent = player === 1 ? 2 : 1;
+        
+        // 找到所有能形成冲四的位置
+        const fourMoves = this.findAllFourMoves(player);
+        if (fourMoves.length === 0) {
+            return null;
+        }
+        
+        // 对每个冲四位置进行深度搜索
+        for (const move of fourMoves) {
+            if (defenseMode) {
+                // 防守模式：检查这个冲四是否会导致必败
+                this.board[move.y][move.x] = player;
+                const canDefend = this.canDefendVCF(opponent, player, maxDepth - 1);
+                
+                if (!canDefend) {
+                    // 找到一个无法防守的VCF威胁点，返回防守位置
+                    const defensePoint = this.findDefensePoint(opponent, move);
+                    this.board[move.y][move.x] = 0;
+                    if (defensePoint) {
+                        return defensePoint;
+                    }
+                    // 如果无法找到防守点，则返回null表示无力防守
+                    return null;
+                }
+                
+                this.board[move.y][move.x] = 0;
+            } else {
+                // 进攻模式：检查这个冲四是否能形成VCF
+                this.board[move.y][move.x] = player;
+                const isVCF = this.checkVCFSequence(player, opponent, maxDepth - 1);
+                this.board[move.y][move.x] = 0;
+                
+                if (isVCF) {
+                    return move;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 检查VCF序列是否能成功
+     */
+    checkVCFSequence(attacker, defender, depth) {
+        if (depth <= 0) {
+            return false;
+        }
+        
+        // 检查是否已经形成活四或五连
+        const winMove = this.findWinningMove(attacker);
+        if (winMove) {
+            return true;
+        }
+        
+        // 检查是否有活四
+        const openFourMove = this.findOpenFourMove(attacker);
+        if (openFourMove) {
+            return true; // 活四必胜
+        }
+        
+        // 找下一个冲四
+        const fourMoves = this.findAllFourMoves(attacker);
+        if (fourMoves.length === 0) {
+            return false;
+        }
+        
+        // 尝试每个冲四
+        for (const move of fourMoves) {
+            this.board[move.y][move.x] = attacker;
+            
+            // 对手必须防守
+            const defensePoint = this.findDefensePoint(defender, move);
+            if (!defensePoint) {
+                this.board[move.y][move.x] = 0;
+                return true; // 无法防守，VCF成功
+            }
+            
+            this.board[defensePoint.y][defensePoint.x] = defender;
+            
+            // 递归检查后续VCF
+            const continueVCF = this.checkVCFSequence(attacker, defender, depth - 1);
+            
+            this.board[defensePoint.y][defensePoint.x] = 0;
+            this.board[move.y][move.x] = 0;
+            
+            if (continueVCF) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 检查能否防守VCF
+     */
+    canDefendVCF(defender, attacker, depth) {
+        if (depth <= 0) {
+            return true; // 深度耗尽，假设能防守
+        }
+        
+        const winMove = this.findWinningMove(attacker);
+        if (winMove) {
+            return false; // 对手已经能赢了
+        }
+        
+        const fourMoves = this.findAllFourMoves(attacker);
+        if (fourMoves.length === 0) {
+            return true; // 没有冲四威胁
+        }
+        
+        // 尝试防守每个冲四
+        for (const move of fourMoves) {
+            this.board[move.y][move.x] = attacker;
+            const defensePoint = this.findDefensePoint(defender, move);
+            
+            if (!defensePoint) {
+                this.board[move.y][move.x] = 0;
+                return false; // 无法防守
+            }
+            
+            this.board[defensePoint.y][defensePoint.x] = defender;
+            const canContinueDefend = this.canDefendVCF(defender, attacker, depth - 1);
+            this.board[defensePoint.y][defensePoint.x] = 0;
+            this.board[move.y][move.x] = 0;
+            
+            if (!canContinueDefend) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * 找到所有能形成冲四的位置
+     */
+    findAllFourMoves(player) {
+        const moves = [];
+        
+        for (let y = 0; y < this.boardSize; y++) {
+            for (let x = 0; x < this.boardSize; x++) {
+                if (this.board[y][x] !== 0) {
+                    continue;
+                }
+                if (this.isForbiddenMoveForPlayer(player, x, y)) {
+                    continue;
+                }
+                
+                this.board[y][x] = player;
+                
+                let hasFour = false;
+                for (const {dx, dy} of this.aiDirections) {
+                    const line = this.getLine(x, y, dx, dy, player);
+                    if (line.length === 4) {
+                        const space = this.checkLineSpace(x, y, dx, dy, player, 4);
+                        if (space.one) {
+                            hasFour = true;
+                            break;
+                        }
+                    }
+                }
+                
+                this.board[y][x] = 0;
+                
+                if (hasFour) {
+                    moves.push({x, y});
+                }
+            }
+        }
+        
+        return moves;
+    }
+    
+    /**
+     * 找到活四位置
+     */
+    findOpenFourMove(player) {
+        for (let y = 0; y < this.boardSize; y++) {
+            for (let x = 0; x < this.boardSize; x++) {
+                if (this.board[y][x] !== 0) continue;
+                
+                this.board[y][x] = player;
+                
+                // 检查是否形成活四
+                for (const {dx, dy} of this.aiDirections) {
+                    const line = this.getLine(x, y, dx, dy, player);
+                    if (line.length === 4) {
+                        const space = this.checkLineSpace(x, y, dx, dy, player, 4);
+                        if (space.both) {
+                            this.board[y][x] = 0;
+                            if (!this.isForbiddenMoveForPlayer(player, x, y)) {
+                                return {x, y};
+                            }
+                        }
+                    }
+                }
+                
+                this.board[y][x] = 0;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 找到防守点（阻止对手形成五连）
+     */
+    findDefensePoint(defender, attackMove) {
+        // 找到必须防守的点
+        const attacker = defender === 1 ? 2 : 1;
+        
+        // 检查攻击点周围能形成五连的位置
+        for (const {dx, dy} of this.aiDirections) {
+            const line = this.getLine(attackMove.x, attackMove.y, dx, dy, attacker);
+            if (line.length >= 4) {
+                // 找到线的两端
+                const first = line[0];
+                const last = line[line.length - 1];
+                
+                // 检查前端
+                const beforeX = first.x - dx;
+                const beforeY = first.y - dy;
+                if (this.isValidPosition(beforeX, beforeY) && this.board[beforeY][beforeX] === 0) {
+                    if (!this.isForbiddenMoveForPlayer(defender, beforeX, beforeY)) {
+                        return {x: beforeX, y: beforeY};
+                    }
+                }
+                
+                // 检查后端
+                const afterX = last.x + dx;
+                const afterY = last.y + dy;
+                if (this.isValidPosition(afterX, afterY) && this.board[afterY][afterX] === 0) {
+                    if (!this.isForbiddenMoveForPlayer(defender, afterX, afterY)) {
+                        return {x: afterX, y: afterY};
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 找到关键防守位置（阻止对手的必胜威胁）
+     */
+    findCriticalDefenseMove(opponent, defender = this.currentPlayer) {
+        const candidates = this.getCandidateMoves(2, opponent);
+        
+        for (const {x, y} of candidates) {
+            if (this.isForbiddenMoveForPlayer(defender, x, y)) {
+                continue;
+            }
+            
+            this.board[y][x] = opponent;
+            
+            let openThreeCount = 0;
+            let closedFourCount = 0;
+            let openFourCount = 0;
+            
+            for (const {dx, dy} of this.aiDirections) {
+                const pattern = this.analyzeLinePattern(x, y, dx, dy, opponent);
+                if (pattern.type === 'openThree') openThreeCount++;
+                if (pattern.type === 'closedFour') closedFourCount++;
+                if (pattern.type === 'openFour') openFourCount++;
+            }
+            
+            this.board[y][x] = 0;
+            
+            const hasDoubleThreat = openFourCount >= 2 || (openFourCount >= 1 && (closedFourCount >= 1 || openThreeCount >= 1));
+            const hasDoubleThree = openThreeCount >= 2;
+            
+            if (hasDoubleThreat || (opponent === 2 && hasDoubleThree)) {
+                return {x, y};
+            }
+        }
+        
+        return null;
+    }
 }
 
 const GAME_CORE_MODULE_INFO = {
     name: 'GomokuGame',
-    version: '1.0.3',
+    version: '1.1.0',
     author: '项目团队',
     dependencies: [
         'GameUtils'
