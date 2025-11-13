@@ -133,6 +133,8 @@ class InterfaceDemo {
         this.aiTimer = null;
         this.hintResetTimer = null;
         this.eveAutoPlay = false; // EvE模式自动对战标志
+        this.lastHintTime = 0; // 上次使用提示的时间
+        this.hintCooldown = 3000; // 提示冷却时间（毫秒）
         
         // 禁手提示配置
         this.forbiddenPromptConfig = {
@@ -386,12 +388,12 @@ class InterfaceDemo {
     getAIThinkingDuration(difficulty) {
         const level = difficulty || window.game?.aiDifficulty || 'NORMAL';
         const durations = {
-            'BEGINNER': 700,
-            'NORMAL': 1200,
-            'HARD': 1800,
-            'HELL': 2400
+            'BEGINNER': 500,
+            'NORMAL': 900,
+            'HARD': 1400,
+            'HELL': 1800
         };
-        return durations[level] || 1200;
+        return durations[level] || 900;
     }
     
     finishAIThinking() {
@@ -727,13 +729,22 @@ class InterfaceDemo {
     showHint() {
         this.addButtonClickEffect('hint-btn');
         
+        const now = Date.now();
+        const cooldownRemaining = this.hintCooldown - (now - this.lastHintTime);
+        
+        if (cooldownRemaining > 0) {
+            const seconds = Math.ceil(cooldownRemaining / 1000);
+            this.updateHintMessage(`⏰ 提示冷却中，请等待 ${seconds} 秒`);
+            console.warn(`[Demo] 提示冷却中，剩余 ${seconds} 秒`);
+            return;
+        }
+        
         if (!window.game) {
             this.updateHintMessage('⚠️ 游戏核心未加载，无法提供提示');
             console.error('[Demo] 游戏核心未加载，无法获取AI建议');
             return;
         }
         
-        // 确保使用最新的玩家信息
         if (typeof window.game.getGameInfo === 'function') {
             const info = window.game.getGameInfo();
             this.currentPlayer = info.currentPlayer;
@@ -763,6 +774,8 @@ class InterfaceDemo {
                 return;
             }
         }
+        
+        this.lastHintTime = now;
         
         console.log('[Demo] 正在获取AI建议...');
         const aiMove = window.game.getAIMove();
@@ -1221,7 +1234,7 @@ class InterfaceDemo {
 
 const INTERFACE_DEMO_MODULE_INFO = {
     name: 'InterfaceDemo',
-    version: '1.0.3',
+    version: '1.1.0',
     author: '项目团队',
     dependencies: INTERFACE_DEMO_REQUIRED_MODULES
 };
