@@ -162,8 +162,18 @@
                             <span class="vcf-difficulty" id="vcf-practice-difficulty">难度</span>
                         </div>
                         <p class="vcf-practice-desc" id="vcf-practice-desc">请选择冲四练习模式开始挑战。</p>
-                        <div class="vcf-practice-progress" id="vcf-practice-progress">第0步 / 共0步</div>
-                        <div class="vcf-practice-hint" id="vcf-practice-hint">提示将在练习开始后提供。</div>
+                        <div class="vcf-practice-progress" id="vcf-practice-progress">等级0 · 已完成0/50题 · 连胜0题</div>
+                        <div class="vcf-practice-hint" id="vcf-practice-hint">目标：在规定步数内获胜 · AI防守：地狱级</div>
+                        <div class="vcf-level-selector">
+                            <label for="vcf-level-select">选择等级：</label>
+                            <select id="vcf-level-select" class="select">
+                                <option value="1">入门 (1-3步)</option>
+                                <option value="2">初级 (3-5步)</option>
+                                <option value="3">中级 (5-7步)</option>
+                                <option value="4">高级 (7+步)</option>
+                            </select>
+                        </div>
+                        <div class="vcf-practice-best" id="vcf-practice-best">历史最快：未记录</div>
                         <div class="vcf-practice-actions">
                             <button type="button" class="btn btn--secondary" id="vcf-practice-retry">重新练习</button>
                             <button type="button" class="btn btn--primary" id="vcf-practice-next">下一题</button>
@@ -324,6 +334,10 @@
                             <div class="result-stat">
                                 <span class="stat-label">回合:</span>
                                 <span class="stat-value" id="final-moves">25回合</span>
+                            </div>
+                            <div class="result-stat" id="vcf-best-record-container" style="display: none;">
+                                <span class="stat-label">⭐</span>
+                                <span class="stat-value" id="vcf-best-record">历史最快: 未记录</span>
                             </div>
                         </div>
                     </div>
