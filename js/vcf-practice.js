@@ -3,8 +3,8 @@
  * 负责管理VCF练习题库、验证玩家走法、提供练习指导
  * 
  * @author 项目团队
- * @version 1.1.0
- * @date 2025
+ * @version 1.2.0
+ * @date 2025-01-06
  */
 
 class VCFPracticeManager {
@@ -21,158 +21,81 @@ class VCFPracticeManager {
      */
     initializePuzzles() {
         return [
-            // 入门级练习1：简单横向冲四
+            // 入门级练习1：横向冲四
             {
-                id: 'beginner-01',
+                id: 'vcf-basic-horizontal',
                 title: '横向突破',
                 difficulty: '入门',
-                description: '黑先，通过横向连续冲四取胜',
+                description: '黑棋先手，通过横向冲四逼迫白棋防守后顺势五连。',
                 initialBoard: this.createEmptyBoard([
-                    {x: 6, y: 7, player: 1},
-                    {x: 7, y: 7, player: 1},
-                    {x: 8, y: 7, player: 1},
-                    {x: 7, y: 8, player: 2},
-                    {x: 6, y: 8, player: 2}
+                    { x: 6, y: 7, player: 1 },
+                    { x: 7, y: 7, player: 1 },
+                    { x: 8, y: 7, player: 1 },
+                    { x: 6, y: 8, player: 2 },
+                    { x: 7, y: 8, player: 2 }
                 ]),
                 currentPlayer: 1,
                 solution: [
-                    {x: 9, y: 7, player: 1, type: 'attack', desc: '形成横向冲四'},
-                    {x: 5, y: 7, player: 2, type: 'defense', desc: '白方被迫防守'},
-                    {x: 5, y: 7, player: 1, type: 'attack', desc: '完成五连获胜'}
+                    { x: 9, y: 7, player: 1, type: 'attack', desc: '先在右侧落子，形成横向冲四。' },
+                    { x: 5, y: 7, player: 2, type: 'defense', desc: '白棋必须补在左侧防止立即成五。' },
+                    { x: 10, y: 7, player: 1, type: 'attack', desc: '再次延伸，完成五连取胜。' }
                 ],
                 hints: [
-                    '观察黑棋已有的横向三连子，寻找能形成冲四的位置',
-                    '恭喜！白方防守后，你可以完成五连',
-                    '完美！练习完成'
+                    '横向已有三连，尝试在右侧继续延伸制造冲四。',
+                    '白棋封住左侧后，留意另一端仍有空间。',
+                    '最后一步直接延伸到右侧，完成五连。'
                 ]
             },
-            
-            // 入门级练习2：斜向冲四
+
+            // 入门级练习2：对角冲四
             {
-                id: 'beginner-02',
+                id: 'vcf-basic-diagonal',
                 title: '斜线攻势',
                 difficulty: '入门',
-                description: '黑先，通过斜向冲四连击制胜',
+                description: '黑棋沿主对角线发动冲四，迫使白棋落在角上防守。',
                 initialBoard: this.createEmptyBoard([
-                    {x: 6, y: 6, player: 1},
-                    {x: 7, y: 7, player: 1},
-                    {x: 8, y: 8, player: 1},
-                    {x: 7, y: 6, player: 2},
-                    {x: 8, y: 7, player: 2}
+                    { x: 6, y: 6, player: 1 },
+                    { x: 7, y: 7, player: 1 },
+                    { x: 8, y: 8, player: 1 },
+                    { x: 7, y: 6, player: 2 },
+                    { x: 8, y: 7, player: 2 }
                 ]),
                 currentPlayer: 1,
                 solution: [
-                    {x: 9, y: 9, player: 1, type: 'attack', desc: '形成斜向冲四'},
-                    {x: 5, y: 5, player: 2, type: 'defense', desc: '白方防守'},
-                    {x: 5, y: 5, player: 1, type: 'attack', desc: '完成五连'}
+                    { x: 9, y: 9, player: 1, type: 'attack', desc: '沿对角线继续延伸，制造冲四。' },
+                    { x: 5, y: 5, player: 2, type: 'defense', desc: '白棋只得补在对角线另一端。' },
+                    { x: 10, y: 10, player: 1, type: 'attack', desc: '顺势再走一步，完成对角五连。' }
                 ],
                 hints: [
-                    '注意黑棋的斜线三连，找到能延伸成冲四的点',
-                    '很好！继续完成最后一步',
-                    '太棒了！VCF练习成功'
+                    '注意主对角线已经有三子连线，可向右下延伸。',
+                    '白棋防守后，对角线另一端仍然空着。',
+                    '保持同一条对角线，继续延伸即可五连。'
                 ]
             },
-            
-            // 中级练习：双向威胁
+
+            // 中级练习：纵向二次冲四
             {
-                id: 'intermediate-01',
-                title: '双线夹击',
+                id: 'vcf-intermediate-vertical',
+                title: '垂直压制',
                 difficulty: '中级',
-                description: '黑先，利用横纵两个方向的威胁连续冲四获胜',
+                description: '黑棋利用纵向冲四制造强制节奏，连走两步完成胜利。',
                 initialBoard: this.createEmptyBoard([
-                    {x: 7, y: 6, player: 1},
-                    {x: 7, y: 7, player: 1},
-                    {x: 7, y: 8, player: 1},
-                    {x: 6, y: 7, player: 1},
-                    {x: 8, y: 6, player: 2},
-                    {x: 9, y: 7, player: 2},
-                    {x: 6, y: 9, player: 2}
+                    { x: 7, y: 6, player: 1 },
+                    { x: 7, y: 7, player: 1 },
+                    { x: 7, y: 8, player: 1 },
+                    { x: 6, y: 7, player: 2 },
+                    { x: 8, y: 7, player: 2 }
                 ]),
                 currentPlayer: 1,
                 solution: [
-                    {x: 7, y: 5, player: 1, type: 'attack', desc: '纵向冲四'},
-                    {x: 7, y: 9, player: 2, type: 'defense', desc: '白方防守上方'},
-                    {x: 5, y: 7, player: 1, type: 'attack', desc: '横向冲四'},
-                    {x: 9, y: 7, player: 2, type: 'defense', desc: '白方防守左侧（已有子，此处为示例）'},
-                    {x: 7, y: 9, player: 1, type: 'attack', desc: '再次纵向冲四形成双四必胜'}
+                    { x: 7, y: 5, player: 1, type: 'attack', desc: '先向上延伸，形成纵向冲四。' },
+                    { x: 7, y: 9, player: 2, type: 'defense', desc: '白棋必须挡在下方。' },
+                    { x: 7, y: 4, player: 1, type: 'attack', desc: '再向上补点，实现纵向五连。' }
                 ],
                 hints: [
-                    '先利用纵向的三连制造第一个冲四威胁',
-                    '白方防守后，转向横向进攻',
-                    '注意制造多重威胁',
-                    '继续保持连续冲四的节奏',
-                    '完美执行VCF战术！'
-                ]
-            },
-            
-            // 中级练习2：转折攻击
-            {
-                id: 'intermediate-02',
-                title: '灵活转向',
-                difficulty: '中级',
-                description: '黑先，通过方向转换的连续冲四取胜',
-                initialBoard: this.createEmptyBoard([
-                    {x: 7, y: 7, player: 1},
-                    {x: 8, y: 7, player: 1},
-                    {x: 9, y: 7, player: 1},
-                    {x: 7, y: 8, player: 1},
-                    {x: 7, y: 9, player: 1},
-                    {x: 6, y: 7, player: 2},
-                    {x: 8, y: 8, player: 2},
-                    {x: 9, y: 9, player: 2}
-                ]),
-                currentPlayer: 1,
-                solution: [
-                    {x: 10, y: 7, player: 1, type: 'attack', desc: '横向冲四'},
-                    {x: 5, y: 7, player: 2, type: 'defense', desc: '白方防守'},
-                    {x: 7, y: 6, player: 1, type: 'attack', desc: '转纵向冲四'},
-                    {x: 7, y: 10, player: 2, type: 'defense', desc: '白方防守'},
-                    {x: 5, y: 7, player: 1, type: 'attack', desc: '回到横向形成五连'}
-                ],
-                hints: [
-                    '从横向的三连开始进攻',
-                    '白方防守后，注意纵向也有威胁',
-                    '灵活切换进攻方向是VCF的关键',
-                    '继续施加压力',
-                    '太棒了！成功完成转折攻击'
-                ]
-            },
-            
-            // 高级练习：复杂VCF序列
-            {
-                id: 'advanced-01',
-                title: '大师级连杀',
-                difficulty: '高级',
-                description: '黑先，通过6步以上的VCF序列取胜',
-                initialBoard: this.createEmptyBoard([
-                    {x: 7, y: 7, player: 1},
-                    {x: 8, y: 8, player: 1},
-                    {x: 9, y: 9, player: 1},
-                    {x: 6, y: 7, player: 1},
-                    {x: 7, y: 8, player: 1},
-                    {x: 8, y: 6, player: 2},
-                    {x: 9, y: 7, player: 2},
-                    {x: 10, y: 8, player: 2},
-                    {x: 6, y: 9, player: 2}
-                ]),
-                currentPlayer: 1,
-                solution: [
-                    {x: 10, y: 10, player: 1, type: 'attack', desc: '斜线冲四'},
-                    {x: 5, y: 6, player: 2, type: 'defense', desc: '白方防守'},
-                    {x: 5, y: 7, player: 1, type: 'attack', desc: '横向冲四'},
-                    {x: 10, y: 7, player: 2, type: 'defense', desc: '白方防守'},
-                    {x: 7, y: 9, player: 1, type: 'attack', desc: '纵向冲四'},
-                    {x: 7, y: 6, player: 2, type: 'defense', desc: '白方防守'},
-                    {x: 5, y: 6, player: 1, type: 'attack', desc: '回到斜线形成五连'}
-                ],
-                hints: [
-                    '从斜线的三连开始，这是关键的第一步',
-                    '白方防守后，寻找横向的机会',
-                    '继续保持多方向的威胁',
-                    '注意每一步都必须是冲四',
-                    '快到了，保持冷静',
-                    '继续施压',
-                    '完美！你已掌握复杂VCF序列'
+                    '纵向已有三子连线，先在上方再放一子。',
+                    '白棋补在下方后，观察上方是否还有空位。',
+                    '继续向上延伸，就能完成五连。'
                 ]
             }
         ];
@@ -384,7 +307,7 @@ class VCFPracticeManager {
 // 模块信息
 const VCF_PRACTICE_MODULE_INFO = {
     name: 'VCFPracticeManager',
-    version: '1.1.0',
+    version: '1.2.0',
     author: '项目团队',
     dependencies: []
 };

@@ -1,13 +1,14 @@
 # H5五子棋游戏
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](./docs/history/VERSION.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](./docs/history/VERSION.md)
 
 > 基于 HTML5 Canvas 技术开发的在线五子棋游戏，支持双人对战和人机对战模式
 
 ## ✨ 项目特色
 
-- 🎮 **双模式对战** - 支持双人对战(PvP)和人机对战(PvE)
+- 🎮 **多模式对战** - 支持双人对战(PvP)、人机对战(PvE)、机机对战(EvE)和VCF练习
+- 🎓 **VCF练习模式** - 系统化学习冲四战术，从入门到精通 ⭐NEW!
 - 🎯 **完整规则** - 严格遵循五子棋规则，包括禁手检测
 - 🤖 **智能AI** - 四级难度AI系统 (新手/正常/困难/地狱)
 - 💾 **存档回放** - 支持棋局保存、加载和回放功能
@@ -62,6 +63,8 @@ npx http-server -p 8080
 ### 游戏模式
 - **双人对战 (PvP)** - 黑白双方轮流对弈
 - **人机对战 (PvE)** - 对战AI，可选择四种难度
+- **机机对战 (EvE)** - 观赏AI之间的对弈
+- **冲四练习 (VCF)** - 通过专题练习掌握连续冲四战术 ⭐NEW!
 
 ### 规则系统
 - ✅ 标准五子棋规则
@@ -94,7 +97,8 @@ gomoku-game/
 │   ├── board-renderer.js  # 棋盘渲染器
 │   ├── demo.js            # 界面交互
 │   ├── game-save-load.js  # 存档功能
-│   └── game-replay.js     # 回放功能
+│   ├── game-replay.js     # 回放功能
+│   └── vcf-practice.js    # VCF练习管理器 ⭐NEW!
 ├── css/                    # 样式文件
 │   ├── style.css          # 主样式
 │   └── animations.css     # 动画效果
