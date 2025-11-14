@@ -134,6 +134,12 @@ class SimpleBoardRenderer {
     }
     
     placePiece(x, y) {
+        // VCF练习模式特殊处理
+        if (window.demo && window.demo.gameMode === 'VCF_PRACTICE' && window.demo.practiceState && window.demo.practiceState.active) {
+            window.demo.handleVCFPracticeMove(x, y);
+            return;
+        }
+        
         // 调用游戏核心引擎的落子方法
         if (!window.game) {
             console.error('[BoardRenderer] 游戏核心引擎未加载');
@@ -677,7 +683,7 @@ class SimpleBoardRenderer {
 
 const BOARD_RENDERER_MODULE_INFO = {
     name: 'SimpleBoardRenderer',
-    version: '1.0.3',
+    version: '1.0.4',
     author: '项目团队',
     dependencies: [
         'GomokuGame',

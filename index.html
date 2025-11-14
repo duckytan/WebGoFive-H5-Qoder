@@ -18,7 +18,7 @@
                 <h1 class="game-title">
                     <span class="title-icon">🏁</span>
                     H5五子棋
-                    <span class="version-badge">v1.1.0</span>
+                    <span class="version-badge">v1.2.0</span>
                 </h1>
                 <div class="header-controls">
                     <button type="button" class="btn btn--icon" id="hint-btn" aria-label="获取提示" title="获取提示 (H)">
@@ -149,6 +149,24 @@
                                     <span></span><span></span><span></span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VCF练习信息面板 -->
+                <div class="vcf-practice-panel" id="vcf-practice-panel" style="display: none;">
+                    <h3 class="section-title">冲四练习（VCF）</h3>
+                    <div class="vcf-practice-body">
+                        <div class="vcf-practice-header">
+                            <span class="vcf-practice-title" id="vcf-practice-title">练习标题</span>
+                            <span class="vcf-difficulty" id="vcf-practice-difficulty">难度</span>
+                        </div>
+                        <p class="vcf-practice-desc" id="vcf-practice-desc">请选择冲四练习模式开始挑战。</p>
+                        <div class="vcf-practice-progress" id="vcf-practice-progress">第0步 / 共0步</div>
+                        <div class="vcf-practice-hint" id="vcf-practice-hint">提示将在练习开始后提供。</div>
+                        <div class="vcf-practice-actions">
+                            <button type="button" class="btn btn--secondary" id="vcf-practice-retry">重新练习</button>
+                            <button type="button" class="btn btn--primary" id="vcf-practice-next">下一题</button>
                         </div>
                     </div>
                 </div>
@@ -606,6 +624,7 @@
     <script src="js/board-renderer.js"></script>
     <script src="js/game-save-load.js"></script>
     <script src="js/game-replay.js"></script>
+    <script src="js/vcf-practice.js"></script>
     <script src="js/demo.js"></script>
-</body>
-</html>
+    </body>
+    </html>

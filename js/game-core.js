@@ -614,11 +614,45 @@ class GomokuGame {
     }
     
     /**
+     * 加载自定义棋盘状态（用于教程/练习模式）
+     * @param {Object} options - 自定义状态选项
+     * @param {Array<Array<number>>} options.board - 15x15棋盘状态
+     * @param {number} [options.currentPlayer=1] - 当前落子方
+     * @param {Array<Object>} [options.moves=[]] - 历史记录
+     * @param {string} [options.gameStatus='playing'] - 游戏状态
+     */
+    loadCustomState({ board, currentPlayer = 1, moves = [], gameStatus = 'playing' } = {}) {
+        if (!Array.isArray(board) || board.length !== this.boardSize) {
+            console.error('[GameCore] 自定义棋盘数据无效');
+            return false;
+        }
+        
+        const normalizedBoard = board.map(row => {
+            if (!Array.isArray(row) || row.length !== this.boardSize) {
+                return Array(this.boardSize).fill(0);
+            }
+            return row.map(cell => (cell === 1 || cell === 2) ? cell : 0);
+        });
+        
+        this.board = normalizedBoard.map(row => row.slice());
+        this.moves = Array.isArray(moves) ? moves.slice() : [];
+        this.currentPlayer = currentPlayer === 2 ? 2 : 1;
+        this.gameStatus = ['ready', 'playing', 'finished'].includes(gameStatus) ? gameStatus : 'playing';
+        this.winner = null;
+        this.startTime = this.gameStatus === 'ready' ? null : Date.now();
+        this.endTime = null;
+        
+        console.log('[GameCore] 已加载自定义棋盘状态');
+        return true;
+    }
+    
+    /**
      * 设置游戏模式
-     * @param {string} mode - 游戏模式：PvP、PvE或EvE
+     * @param {string} mode - 游戏模式：PvP、PvE、EvE或VCF练习
      */
     setGameMode(mode) {
-        if (mode !== 'PvP' && mode !== 'PvE' && mode !== 'EvE') {
+        const validModes = ['PvP', 'PvE', 'EvE', 'VCF_PRACTICE'];
+        if (!validModes.includes(mode)) {
             console.error('[GameCore] 无效的游戏模式:', mode);
             return;
         }
@@ -1895,7 +1929,7 @@ class GomokuGame {
 
 const GAME_CORE_MODULE_INFO = {
     name: 'GomokuGame',
-    version: '1.1.0',
+    version: '1.2.0',
     author: '项目团队',
     dependencies: [
         'GameUtils'
