@@ -247,11 +247,19 @@ class InterfaceDemo {
         // VCF练习按钮
         const vcfRetryBtn = document.getElementById('vcf-practice-retry');
         const vcfNextBtn = document.getElementById('vcf-practice-next');
+        const vcfLevelSelect = document.getElementById('vcf-level-select');
+        
         if (vcfRetryBtn) {
             vcfRetryBtn.addEventListener('click', () => this.restartVCFPuzzle());
         }
         if (vcfNextBtn) {
             vcfNextBtn.addEventListener('click', () => this.startVCFPractice());
+        }
+        if (vcfLevelSelect) {
+            vcfLevelSelect.addEventListener('change', (e) => {
+                const level = parseInt(e.target.value, 10);
+                this.startVCFPractice(level);
+            });
         }
     }
     
@@ -442,7 +450,7 @@ class InterfaceDemo {
             return false;
         }
         if (this.gameMode === 'VCF_PRACTICE') {
-            return this.practiceState.active && !this.practiceManager?.isComplete();
+            return this.practiceState.active && !this.practiceState.completed;
         }
         if (this.gameMode === 'PvE') {
             if (this.aiThinking) {
@@ -518,19 +526,35 @@ class InterfaceDemo {
         }
     }
     
-    startVCFPractice() {
+    startVCFPractice(level = null) {
         if (!this.practiceManager) {
             this.updateHintMessage('⚠️ VCF练习管理器未加载');
             return;
         }
         
-        // 获取随机练习题
-        const puzzle = this.practiceManager.getRandomPuzzle();
+        // 设置目标等级
+        if (level === null) {
+            level = this.selectedPracticeLevel || this.practiceManager.currentLevel || 1;
+        } else {
+            this.selectedPracticeLevel = level;
+        }
+        
+        // 开始新练习
+        const puzzle = this.practiceManager.startPractice(level);
+        
+        if (!puzzle) {
+            this.updateHintMessage('⚠️ 无法加载练习题');
+            return;
+        }
+        
+        this.selectedPracticeLevel = puzzle.level;
+        
         this.practiceState = {
             active: true,
             currentPuzzle: puzzle,
             stepIndex: 0,
-            completed: false
+            completed: false,
+            playerMoves: 0
         };
         
         // 加载练习题棋盘
@@ -540,6 +564,9 @@ class InterfaceDemo {
                 currentPlayer: puzzle.currentPlayer,
                 gameStatus: 'playing'
             });
+            
+            // 设置AI为最高难度
+            window.game.setAIDifficulty('HELL');
         }
         
         // 渲染棋盘
@@ -567,7 +594,8 @@ class InterfaceDemo {
         if (saveBtn) saveBtn.disabled = true;
         if (replayBtn) replayBtn.disabled = true;
         
-        console.log('[Demo] 开始VCF练习:', puzzle.title);
+        const levelName = this.practiceManager.getLevelName(this.practiceManager.currentLevel);
+        console.log('[Demo] 开始VCF练习:', puzzle.title, '等级:', levelName);
     }
     
     updateVCFPracticeDisplay() {
@@ -576,8 +604,8 @@ class InterfaceDemo {
         }
         
         const puzzle = this.practiceState.currentPuzzle;
-        const progress = this.practiceManager.getProgress();
-        this.practiceState.stepIndex = this.practiceManager.currentStep || 0;
+        const stats = this.practiceManager.getProgressStats();
+        const levelName = this.practiceManager.getLevelName(puzzle.level);
         
         // 更新练习信息面板
         const titleEl = document.getElementById('vcf-practice-title');
@@ -585,26 +613,47 @@ class InterfaceDemo {
         const descEl = document.getElementById('vcf-practice-desc');
         const progressEl = document.getElementById('vcf-practice-progress');
         const hintEl = document.getElementById('vcf-practice-hint');
+        const bestEl = document.getElementById('vcf-practice-best');
+        const levelSelectEl = document.getElementById('vcf-level-select');
         
         if (titleEl) titleEl.textContent = puzzle.title;
         if (difficultyEl) {
             const difficultyClassMap = {
                 '入门': 'beginner',
-                '中级': 'intermediate',
-                '高级': 'advanced',
-                '大师': 'master',
-                '专家': 'expert'
+                '初级': 'intermediate',
+                '中级': 'advanced',
+                '高级': 'expert'
             };
-            const difficultyClass = difficultyClassMap[puzzle.difficulty] || 'normal';
-            difficultyEl.textContent = puzzle.difficulty;
+            const difficultyClass = difficultyClassMap[levelName] || 'normal';
+            difficultyEl.textContent = levelName;
             difficultyEl.className = `vcf-difficulty vcf-difficulty--${difficultyClass}`;
         }
         if (descEl) descEl.textContent = puzzle.description;
-        if (progressEl) progressEl.textContent = `第${progress.current}步 / 共${progress.total}步`;
-        if (hintEl) hintEl.textContent = this.practiceManager.getCurrentHint();
+        if (progressEl) {
+            const levelProgress = stats.levelProgress[puzzle.level - 1] || 0;
+            const levelTotal = 50;
+            progressEl.textContent = `等级${puzzle.level} · 已完成${levelProgress}/${levelTotal}题 · 连胜${stats.currentStreak}题`;
+        }
+        if (hintEl) {
+            hintEl.textContent = `目标：在${puzzle.maxMoves}步内获胜 · AI防守：地狱级`;
+        }
+        if (bestEl) {
+            const puzzleId = puzzle.id;
+            const bestTime = this.practiceManager.progress.bestTimes[puzzleId];
+            if (bestTime) {
+                bestEl.textContent = `历史最快：${this.formatTime(bestTime)}`;
+                bestEl.style.color = '#4caf50';
+            } else {
+                bestEl.textContent = '历史最快：未记录';
+                bestEl.style.color = '#757575';
+            }
+        }
+        if (levelSelectEl) {
+            levelSelectEl.value = puzzle.level.toString();
+        }
         
         // 更新主状态显示
-        this.updateHintMessage(`📚 练习题：${puzzle.title} - ${puzzle.description}`);
+        this.updateHintMessage(`📚 ${levelName}练习：${puzzle.title} - ${puzzle.description}`);
     }
     
     handleVCFPracticeMove(x, y) {
@@ -612,16 +661,17 @@ class InterfaceDemo {
             return;
         }
         
-        // 验证玩家落子
-        const validation = this.practiceManager.validateMove(x, y);
-        
-        if (!validation.valid) {
-            this.updateHintMessage(`❌ ${validation.message}`);
-            console.warn('[Demo] VCF练习落子错误:', validation.message);
+        if (!window.game) {
+            this.updateHintMessage('⚠️ 游戏核心未加载，无法落子');
             return;
         }
         
-        // 落子正确，执行落子
+        // 检查是否轮到玩家
+        if (window.game.currentPlayer !== this.practiceState.currentPuzzle.currentPlayer && this.practiceState.playerMoves === 0) {
+            this.updateHintMessage('⚠️ 当前不是玩家回合');
+            return;
+        }
+        
         const result = window.game.placePiece(x, y);
         
         if (!result.success) {
@@ -635,65 +685,175 @@ class InterfaceDemo {
             window.boardRenderer.render();
         }
         
-        this.updateHintMessage(`✓ ${validation.message}`);
-        console.log('[Demo] VCF练习落子成功:', x, y);
-        
-        // 前进步骤
-        this.practiceManager.advanceStep();
+        this.practiceState.playerMoves++;
+        this.updateGameStatus();
         this.updateVCFPracticeDisplay();
         
-        // 检查是否完成
-        if (this.practiceManager.isComplete()) {
-            this.completeVCFPractice();
+        // 检查玩家是否获胜
+        if (result.gameOver && result.winner === this.practiceState.currentPuzzle.currentPlayer) {
+            this.finishVCFPractice(true, result);
             return;
         }
         
-        // 自动落下防守棋
+        // 检查步数上限
+        if (this.practiceState.playerMoves >= this.practiceState.currentPuzzle.maxMoves) {
+            this.finishVCFPractice(false, result);
+            return;
+        }
+        
+        // AI防守
         setTimeout(() => {
-            const defenseMove = this.practiceManager.getNextDefenseMove();
-            
-            if (defenseMove) {
-                const defenseResult = window.game.placePiece(defenseMove.x, defenseMove.y);
-                
-                if (defenseResult.success) {
-                    if (window.boardRenderer) {
-                        window.boardRenderer.board = window.game.getBoardState();
-                        window.boardRenderer.render();
-                    }
-                    
-                    this.practiceManager.advanceStep();
-                    this.updateVCFPracticeDisplay();
-                    
-                    console.log('[Demo] AI防守落子:', defenseMove.x, defenseMove.y);
-                }
-            }
-        }, 500);
+            this.executeVCFAIDefense();
+        }, 400);
     }
     
-    completeVCFPractice() {
+    executeVCFAIDefense() {
+        if (!window.game || window.game.gameStatus === 'finished') {
+            return;
+        }
+        
+        const aiMove = window.game.getAIMove();
+        
+        if (!aiMove) {
+            console.warn('[Demo] VCF练习AI未找到防守落点');
+            return;
+        }
+        
+        const defenseResult = window.game.placePiece(aiMove.x, aiMove.y);
+        
+        if (!defenseResult.success) {
+            console.warn('[Demo] VCF练习AI落子失败:', defenseResult.error);
+            return;
+        }
+        
+        if (window.boardRenderer) {
+            window.boardRenderer.board = window.game.getBoardState();
+            window.boardRenderer.render();
+        }
+        
+        this.updateGameStatus();
+        this.updateVCFPracticeDisplay();
+        
+        if (defenseResult.gameOver && defenseResult.winner !== this.practiceState.currentPuzzle.currentPlayer) {
+            this.finishVCFPractice(false, defenseResult);
+        }
+    }
+    
+    finishVCFPractice(isWin, result) {
+        const puzzle = this.practiceState.currentPuzzle;
+        const summary = this.practiceManager.completePractice(isWin);
         this.practiceState.completed = true;
         
-        const puzzle = this.practiceState.currentPuzzle;
-        this.updateHintMessage(`🎉 恭喜完成练习"${puzzle.title}"！`);
+        if (!summary.success) {
+            this.updateHintMessage(summary.message || '练习结束');
+            
+            // 即使失败也显示结果模态框
+            setTimeout(() => {
+                const modal = document.getElementById('game-result-modal');
+                const resultIcon = document.getElementById('result-icon');
+                const resultTitle = document.getElementById('result-title');
+                const resultMessage = document.getElementById('result-message');
+                const finalTimeEl = document.getElementById('final-time');
+                const finalMovesEl = document.getElementById('final-moves');
+                const bestRecordEl = document.getElementById('vcf-best-record');
+                const bestRecordContainer = document.getElementById('vcf-best-record-container');
+                
+                if (resultIcon) {
+                    resultIcon.textContent = '😐';
+                    resultIcon.className = 'result-icon draw';
+                }
+                if (resultTitle) {
+                    resultTitle.textContent = '练习失败';
+                }
+                if (resultMessage) {
+                    resultMessage.textContent = 'AI防守成功，继续尝试其他战术吧';
+                }
+                if (finalTimeEl) {
+                    finalTimeEl.textContent = '未完成';
+                }
+                if (finalMovesEl) {
+                    finalMovesEl.textContent = `${this.practiceState.playerMoves}回合`;
+                }
+                if (bestRecordContainer) {
+                    bestRecordContainer.style.display = 'none';
+                }
+                
+                this.showModal('game-result-modal');
+            }, 600);
+            
+            return;
+        }
         
-        // 显示完成提示（复用游戏结果模态框）
+        const finalTime = summary.elapsedTime || 0;
+        const formattedTime = this.formatTime(finalTime);
+        const bestTime = summary.bestTime ? this.formatTime(summary.bestTime) : '未记录';
+        
+        const levelName = this.practiceManager.getLevelName(puzzle.level);
+        
+        if (isWin) {
+            const recordText = summary.isNewRecord ? '✨ 新纪录！' : `历史最佳：${bestTime}`;
+            const levelUpText = summary.shouldLevelUp ? ` 🎉 已自动升级到${this.practiceManager.getLevelName(summary.newLevel)}等级！` : '';
+            this.updateHintMessage(`🎉 恭喜通关！用时 ${formattedTime} · ${recordText}${levelUpText}`);
+        } else {
+            this.updateHintMessage('❌ 挑战失败，尝试寻找更优的冲四路径');
+        }
+        
+        if (summary.shouldLevelUp && summary.newLevel) {
+            this.selectedPracticeLevel = summary.newLevel;
+            const levelSelect = document.getElementById('vcf-level-select');
+            if (levelSelect) {
+                levelSelect.value = summary.newLevel.toString();
+            }
+        }
+        
+        // 更新面板显示记录
+        this.updateVCFPracticeDisplay();
+        
+        // 显示结果模态框
         setTimeout(() => {
             const modal = document.getElementById('game-result-modal');
             const resultIcon = document.getElementById('result-icon');
             const resultTitle = document.getElementById('result-title');
             const resultMessage = document.getElementById('result-message');
+            const finalTimeEl = document.getElementById('final-time');
+            const finalMovesEl = document.getElementById('final-moves');
+            const bestRecordEl = document.getElementById('vcf-best-record');
+            const bestRecordContainer = document.getElementById('vcf-best-record-container');
             
             if (resultIcon) {
-                resultIcon.textContent = '🎓';
-                resultIcon.className = 'result-icon winner';
+                resultIcon.textContent = isWin ? '🏆' : '😐';
+                resultIcon.className = `result-icon ${isWin ? 'winner' : 'draw'}`;
             }
-            if (resultTitle) resultTitle.textContent = 'VCF练习完成！';
-            if (resultMessage) resultMessage.textContent = `恭喜你成功完成"${puzzle.title}"（${puzzle.difficulty}）！你已掌握该VCF战术。`;
+            if (resultTitle) {
+                resultTitle.textContent = isWin ? '练习成功！' : '练习结束';
+            }
+            if (resultMessage) {
+                resultMessage.textContent = isWin 
+                    ? `${levelName} · ${puzzle.title} 通关！AI防守等级：地狱`
+                    : 'AI防守成功，继续尝试其他战术吧';
+            }
+            if (finalTimeEl) {
+                finalTimeEl.textContent = formattedTime;
+            }
+            if (finalMovesEl) {
+                finalMovesEl.textContent = `${this.practiceState.playerMoves}回合`;
+            }
+            if (bestRecordEl) {
+                bestRecordEl.textContent = `历史最快：${summary.bestTime ? this.formatTime(summary.bestTime) : '未记录'}`;
+                if (bestRecordContainer) {
+                    bestRecordContainer.style.display = 'flex';
+                }
+            }
+            
+            // 如果是新纪录，显示特效
+            if (isWin && summary.isNewRecord && bestRecordContainer) {
+                bestRecordContainer.style.animation = 'pulse 0.6s ease-in-out';
+            }
             
             this.showModal('game-result-modal');
-        }, 1000);
+        }, 600);
         
-        console.log('[Demo] VCF练习完成');
+        console.log('[Demo] VCF练习结束', { isWin, summary });
     }
     
     restartVCFPuzzle() {
@@ -702,28 +862,7 @@ class InterfaceDemo {
             return;
         }
         
-        // 重置当前练习题
-        this.practiceManager.reset();
-        
-        // 重新加载棋盘
-        if (window.game) {
-            window.game.loadCustomState({
-                board: this.practiceState.currentPuzzle.initialBoard,
-                currentPlayer: this.practiceState.currentPuzzle.currentPlayer,
-                gameStatus: 'playing'
-            });
-        }
-        
-        // 重新渲染
-        if (window.boardRenderer) {
-            window.boardRenderer.board = window.game.getBoardState();
-            window.boardRenderer.render();
-        }
-        
-        this.practiceState.stepIndex = 0;
-        this.practiceState.completed = false;
-        this.updateVCFPracticeDisplay();
-        
+        this.startVCFPractice(this.practiceState.currentPuzzle.level);
         console.log('[Demo] 重新开始当前练习题');
     }
     
@@ -1238,6 +1377,15 @@ class InterfaceDemo {
         const resultMessage = document.getElementById('result-message');
         const finalTime = document.getElementById('final-time');
         const finalMoves = document.getElementById('final-moves');
+        const bestRecordContainer = document.getElementById('vcf-best-record-container');
+        const bestRecordValue = document.getElementById('vcf-best-record');
+        
+        if (bestRecordContainer) {
+            bestRecordContainer.style.display = 'none';
+        }
+        if (bestRecordValue) {
+            bestRecordValue.textContent = '历史最快: 未记录';
+        }
         
         if (window.game) {
             const info = window.game.getGameInfo();

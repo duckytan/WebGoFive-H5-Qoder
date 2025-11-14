@@ -1222,6 +1222,29 @@ body {
     flex: 1;
     font-size: 0.9rem;
 }
+
+.vcf-level-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: var(--border-radius);
+    padding: 6px 10px;
+}
+
+.vcf-level-selector label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.vcf-practice-best {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 4px 0;
+}
+
 .vcf-difficulty--normal {
     background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
     color: #006064;
