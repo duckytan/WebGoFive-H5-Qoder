@@ -565,6 +565,9 @@ class InterfaceDemo {
                 gameStatus: 'playing'
             });
             
+            // 设置游戏模式为VCF练习
+            window.game.setGameMode('VCF_PRACTICE');
+            
             // 设置AI为最高难度
             window.game.setAIDifficulty('HELL');
         }
