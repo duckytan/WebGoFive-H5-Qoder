@@ -528,6 +528,9 @@ class InterfaceDemo {
             return;
         }
         
+        // 设置Demo的游戏模式
+        this.gameMode = 'VCF_PRACTICE';
+        
         // 设置目标等级
         if (level === null) {
             level = this.selectedPracticeLevel || this.practiceManager.currentLevel || 1;
