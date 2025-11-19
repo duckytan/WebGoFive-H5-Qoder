@@ -1065,6 +1065,15 @@ class InterfaceDemo {
             this.practiceState.active = false;
         }
         
+        // 如果切换到VCF练习模式，自动开始新的练习题
+        if (this.gameMode === 'VCF_PRACTICE' && this.practiceManager) {
+            this.updateModeDisplay();
+            this.updateHintMessage('已切换到冲四练习（VCF）模式，正在加载题目...');
+            console.log('[Demo] 切换到VCF_PRACTICE模式，自动开始练习');
+            this.startVCFPractice();
+            return;
+        }
+        
         this.updateModeDisplay();
         
         const modeNames = {
