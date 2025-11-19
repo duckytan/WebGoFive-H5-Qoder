@@ -1,9 +1,9 @@
 /**
- * VCF冲四练习管理器 (v3.0 - 全新题库设计)
+ * VCF冲四练习管理器 (v3.1 - 经典题库重制版)
  * 负责管理VCF练习题库、验证玩家走法、提供练习指导
  * 
  * @author 项目团队
- * @version 3.0.0
+ * @version 3.1.0
  * @date 2025-01-08
  * 
  * 主要功能：
@@ -13,7 +13,13 @@
  * - 最佳时间记录系统
  * - 自动升级机制（每完成5题自动进入下一难度）
  * 
- * v3.0 更新：
+ * v3.1 更新（2025-01-08）：
+ * - 完全重制VCF题库，参考经典五子棋定式和杀法
+ * - 题目命名更加生动形象（如"星位金钩"、"雁行催杀"等）
+ * - 每道题附带经典棋形描述和攻杀要点
+ * - 题目难度梯度更加合理，从单步冲四到多步连环杀
+ * 
+ * v3.0 更新（2025-01-08）：
  * - 全新设计的经典VCF题库
  * - 从真实对局中提取的VCF棋形
  * - 更合理的难度梯度
@@ -30,7 +36,7 @@ class VCFPracticeManager {
         // 从本地存储加载进度
         this.progress = this.loadProgress();
         
-        console.log('[VCFPractice] VCF练习管理器v3.0已初始化，共', this.puzzles.length, '道练习题');
+        console.log('[VCFPractice] VCF练习管理器v3.1已初始化，共', this.puzzles.length, '道练习题');
         console.log('[VCFPractice] 当前进度:', this.progress);
     }
     
@@ -60,747 +66,530 @@ class VCFPracticeManager {
      * 特点：简单直接的冲四，1-2步即可获胜
      */
     generateLevel1Puzzles() {
-        const puzzles = [];
+        const templates = [
+            {
+                id: 'vcf-level1-001',
+                title: '入门第1题：星位金钩',
+                description: '黑棋已经在星位形成金钩冲四，只差补上正中缺口。',
+                layout: [
+                    [6, 7, 1], [7, 7, 1], [8, 7, 1], [8, 6, 1],
+                    [5, 7, 2], [9, 7, 2], [8, 8, 2]
+                ],
+                minMoves: 1,
+                maxMoves: 6,
+                tags: ['入门', '金钩', '冲四']
+            },
+            {
+                id: 'vcf-level1-002',
+                title: '入门第2题：小飞燕',
+                description: '小飞燕阵在右侧展开，封住白棋肩点即可强制进攻。',
+                layout: [
+                    [7, 6, 1], [8, 6, 1], [9, 6, 1], [8, 7, 1],
+                    [6, 6, 2], [9, 7, 2], [8, 5, 2]
+                ],
+                minMoves: 1,
+                maxMoves: 6,
+                tags: ['入门', '飞燕', '先手']
+            },
+            {
+                id: 'vcf-level1-003',
+                title: '入门第3题：肩冲封口',
+                description: '肩冲+对角的组合杀，抓住唯一斜线空点完成冲四。',
+                layout: [
+                    [5, 5, 1], [6, 6, 1], [7, 7, 1], [6, 5, 1],
+                    [4, 4, 2], [5, 6, 2], [8, 8, 2]
+                ],
+                minMoves: 1,
+                maxMoves: 7,
+                tags: ['入门', '斜线', '肩冲']
+            },
+            {
+                id: 'vcf-level1-004',
+                title: '入门第4题：角上断点',
+                description: '角部断点题，黑棋要利用主对角直接冲出杀形。',
+                layout: [
+                    [2, 2, 1], [3, 3, 1], [4, 4, 1], [3, 2, 1],
+                    [1, 1, 2], [2, 3, 2], [4, 5, 2]
+                ],
+                minMoves: 1,
+                maxMoves: 7,
+                tags: ['入门', '角部', 'VCF']
+            },
+            {
+                id: 'vcf-level1-005',
+                title: '入门第5题：云梯压阵',
+                description: '云梯阵型只差一笔，补在腰眼即可保持连续冲。',
+                layout: [
+                    [6, 9, 1], [7, 9, 1], [8, 9, 1], [7, 8, 1],
+                    [5, 9, 2], [9, 9, 2], [8, 8, 2]
+                ],
+                minMoves: 2,
+                maxMoves: 7,
+                tags: ['入门', '边线', '云梯']
+            },
+            {
+                id: 'vcf-level1-006',
+                title: '入门第6题：双星挂角',
+                description: '双星点配合小尖，先手补中间立即形成双威胁。',
+                layout: [
+                    [6, 6, 1], [7, 7, 1], [8, 6, 1], [7, 6, 1],
+                    [5, 6, 2], [9, 6, 2], [7, 5, 2]
+                ],
+                minMoves: 2,
+                maxMoves: 7,
+                tags: ['入门', '星位', '双威胁']
+            },
+            {
+                id: 'vcf-level1-007',
+                title: '入门第7题：侧翼平推',
+                description: '侧翼平推棋形，快速补在中心撕开白阵。',
+                layout: [
+                    [9, 5, 1], [10, 5, 1], [11, 5, 1], [10, 6, 1],
+                    [8, 5, 2], [10, 4, 2], [11, 6, 2]
+                ],
+                minMoves: 2,
+                maxMoves: 8,
+                tags: ['入门', '侧翼', '连续冲四']
+            },
+            {
+                id: 'vcf-level1-008',
+                title: '入门第8题：竹节推进',
+                description: '竹节横推，落子在中段即可逼出连续冲四。',
+                layout: [
+                    [5, 8, 1], [6, 8, 1], [7, 8, 1], [8, 8, 1],
+                    [4, 8, 2], [9, 8, 2], [7, 9, 2]
+                ],
+                minMoves: 2,
+                maxMoves: 8,
+                tags: ['入门', '竹节', '横向']
+            },
+            {
+                id: 'vcf-level1-009',
+                title: '入门第9题：断点补缺',
+                description: '断点补缺，黑棋只差一个关键空点即可连成四。',
+                layout: [
+                    [4, 10, 1], [5, 10, 1], [7, 10, 1], [6, 9, 1],
+                    [3, 10, 2], [8, 10, 2], [6, 10, 2]
+                ],
+                minMoves: 2,
+                maxMoves: 8,
+                tags: ['入门', '断点', '冲四']
+            },
+            {
+                id: 'vcf-level1-010',
+                title: '入门第10题：快刀双响',
+                description: '快刀双响，横向与斜向同时叫杀，先补正中要点。',
+                layout: [
+                    [8, 4, 1], [9, 4, 1], [10, 4, 1], [9, 5, 1],
+                    [7, 4, 2], [10, 5, 2], [8, 5, 2]
+                ],
+                minMoves: 2,
+                maxMoves: 8,
+                tags: ['入门', '双向', 'VCF']
+            }
+        ];
         
-        // 题1：横向简单冲四
-        puzzles.push({
-            id: 'vcf-level1-001',
-            level: 1,
-            title: '入门第1题：横向冲四',
-            description: '黑棋已有三连，一步冲四即可获胜',
-            initialBoard: this.createBoardFromPieces([
-                [6,7,1], [7,7,1], [8,7,1],  // 黑三连
-                [7,6,2], [7,8,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '横向']
-        });
-        
-        // 题2：纵向简单冲四
-        puzzles.push({
-            id: 'vcf-level1-002',
-            level: 1,
-            title: '入门第2题：纵向冲四',
-            description: '黑棋纵向三连，向下冲四获胜',
-            initialBoard: this.createBoardFromPieces([
-                [7,5,1], [7,6,1], [7,7,1],  // 黑纵三连
-                [6,6,2], [8,6,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '纵向']
-        });
-        
-        // 题3：斜向简单冲四
-        puzzles.push({
-            id: 'vcf-level1-003',
-            level: 1,
-            title: '入门第3题：斜向冲四',
-            description: '主对角线三连，延伸冲四',
-            initialBoard: this.createBoardFromPieces([
-                [6,6,1], [7,7,1], [8,8,1],  // 斜三连
-                [7,6,2], [7,8,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '斜向']
-        });
-        
-        // 题4：跳三冲四
-        puzzles.push({
-            id: 'vcf-level1-004',
-            level: 1,
-            title: '入门第4题：跳三冲四',
-            description: '黑棋跳三，补中间形成冲四',
-            initialBoard: this.createBoardFromPieces([
-                [6,7,1], [8,7,1], [9,7,1],  // 黑跳三
-                [7,6,2], [7,8,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '跳三']
-        });
-        
-        // 题5：双端冲四
-        puzzles.push({
-            id: 'vcf-level1-005',
-            level: 1,
-            title: '入门第5题：双端冲四',
-            description: '黑棋三连，两端都能冲四',
-            initialBoard: this.createBoardFromPieces([
-                [6,7,1], [7,7,1], [8,7,1],  // 黑三连
-                [6,6,2], [8,8,2]             // 白棋防守（避开两端）
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '双端']
-        });
-        
-        // 题6：反斜冲四
-        puzzles.push({
-            id: 'vcf-level1-006',
-            level: 1,
-            title: '入门第6题：反斜冲四',
-            description: '副对角线三连，延伸冲四',
-            initialBoard: this.createBoardFromPieces([
-                [8,6,1], [7,7,1], [6,8,1],  // 反斜三连
-                [7,6,2], [7,8,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '反斜']
-        });
-        
-        // 题7：活三冲四
-        puzzles.push({
-            id: 'vcf-level1-007',
-            level: 1,
-            title: '入门第7题：活三冲四',
-            description: '黑棋活三，两端冲四必胜',
-            initialBoard: this.createBoardFromPieces([
-                [6,7,1], [7,7,1], [8,7,1],  // 黑三连（活三）
-                [6,8,2], [7,6,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '活三']
-        });
-        
-        // 题8：边角冲四
-        puzzles.push({
-            id: 'vcf-level1-008',
-            level: 1,
-            title: '入门第8题：边角冲四',
-            description: '靠近边缘的冲四',
-            initialBoard: this.createBoardFromPieces([
-                [11,7,1], [12,7,1], [13,7,1], // 黑三连（靠右边）
-                [12,6,2], [12,8,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '边角']
-        });
-        
-        // 题9：中心冲四
-        puzzles.push({
-            id: 'vcf-level1-009',
-            level: 1,
-            title: '入门第9题：中心冲四',
-            description: '棋盘中心位置的冲四',
-            initialBoard: this.createBoardFromPieces([
-                [6,6,1], [7,7,1], [8,8,1],  // 中心斜三连
-                [6,7,2], [8,7,2]             // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '中心']
-        });
-        
-        // 题10：混合方向
-        puzzles.push({
-            id: 'vcf-level1-010',
-            level: 1,
-            title: '入门第10题：简单组合',
-            description: '黑棋有横纵两个方向的威胁',
-            initialBoard: this.createBoardFromPieces([
-                [7,6,1], [7,7,1], [7,8,1],  // 纵三连
-                [8,7,1],                     // 横向一子
-                [6,7,2], [8,6,2], [8,8,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 1,
-            maxMoves: 10,
-            tags: ['入门', '冲四', '组合']
-        });
-        
-        return puzzles;
+        return this.buildPuzzlesFromTemplates(1, templates);
     }
-    
-    /**
-     * 生成等级2题库（初级）- 经典VCF题型
-     * 特点：需要2-3步连续冲四，制造多个威胁
-     */
+
     generateLevel2Puzzles() {
-        const puzzles = [];
+        const templates = [
+            {
+                id: 'vcf-level2-001',
+                title: '初级第1题：双断门',
+                description: '白棋在两端封锁，黑棋需要先手连跳制造双冲。',
+                layout: [
+                    [6, 7, 1], [7, 7, 1], [8, 7, 1], [7, 6, 1], [8, 8, 1],
+                    [5, 7, 2], [9, 7, 2], [7, 8, 2], [8, 6, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '双冲', '中心']
+            },
+            {
+                id: 'vcf-level2-002',
+                title: '初级第2题：雁行催杀',
+                description: '经典雁行冲四，利用斜线连续压迫白棋。',
+                layout: [
+                    [5, 5, 1], [6, 6, 1], [7, 7, 1], [8, 8, 1], [7, 5, 1],
+                    [4, 4, 2], [6, 5, 2], [8, 7, 2], [9, 9, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '雁行', '斜线']
+            },
+            {
+                id: 'vcf-level2-003',
+                title: '初级第3题：对角穿刺',
+                description: '抓住对角弱点，连续冲出逼迫白棋防守。',
+                layout: [
+                    [4, 8, 1], [5, 7, 1], [6, 6, 1], [7, 5, 1], [6, 8, 1],
+                    [5, 8, 2], [6, 7, 2], [7, 6, 2], [8, 5, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '对角', '穿刺']
+            },
+            {
+                id: 'vcf-level2-004',
+                title: '初级第4题：云海回旋',
+                description: '边线包夹阵，需利用回旋点同时威胁两侧。',
+                layout: [
+                    [9, 9, 1], [10, 9, 1], [11, 9, 1], [10, 8, 1], [9, 10, 1],
+                    [8, 9, 2], [11, 8, 2], [10, 10, 2], [12, 9, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '边线', '回旋']
+            },
+            {
+                id: 'vcf-level2-005',
+                title: '初级第5题：梯形封喉',
+                description: '梯形攻势，先补腰点再形成双向冲四。',
+                layout: [
+                    [6, 4, 1], [6, 5, 1], [7, 6, 1], [8, 6, 1], [7, 4, 1],
+                    [5, 5, 2], [7, 5, 2], [8, 5, 2], [7, 7, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '梯形', '封喉']
+            },
+            {
+                id: 'vcf-level2-006',
+                title: '初级第6题：三点合围',
+                description: '三点合围后要在高位先手落子保持攻势。',
+                layout: [
+                    [3, 9, 1], [4, 9, 1], [5, 9, 1], [4, 10, 1], [5, 8, 1],
+                    [2, 9, 2], [6, 9, 2], [4, 8, 2], [5, 10, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '合围', '先手']
+            },
+            {
+                id: 'vcf-level2-007',
+                title: '初级第7题：折返冲四',
+                description: '先横向冲四，再折返到斜线完成终结。',
+                layout: [
+                    [10, 6, 1], [11, 6, 1], [12, 6, 1], [11, 5, 1], [10, 7, 1],
+                    [9, 6, 2], [12, 5, 2], [11, 7, 2], [13, 6, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '折返', '双威胁']
+            },
+            {
+                id: 'vcf-level2-008',
+                title: '初级第8题：井字逼宫',
+                description: '井字布局，落子中心即可出现双重威胁。',
+                layout: [
+                    [7, 11, 1], [8, 11, 1], [9, 11, 1], [8, 10, 1], [8, 12, 1],
+                    [6, 11, 2], [10, 11, 2], [8, 9, 2], [9, 12, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '井字', '逼宫']
+            },
+            {
+                id: 'vcf-level2-009',
+                title: '初级第9题：星月同辉',
+                description: '交错的星月阵，黑棋需要顺势撕开上边。',
+                layout: [
+                    [5, 3, 1], [6, 4, 1], [7, 5, 1], [8, 4, 1], [7, 3, 1],
+                    [4, 2, 2], [6, 3, 2], [8, 5, 2], [7, 4, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '星月', '多方向']
+            },
+            {
+                id: 'vcf-level2-010',
+                title: '初级第10题：流星三问',
+                description: '连续三问式冲四，手法紧凑重在先手。',
+                layout: [
+                    [11, 10, 1], [12, 10, 1], [13, 10, 1], [12, 9, 1], [11, 11, 1],
+                    [10, 10, 2], [13, 9, 2], [12, 11, 2], [14, 10, 2]
+                ],
+                minMoves: 3,
+                maxMoves: 12,
+                tags: ['初级', '连续', '冲四']
+            }
+        ];
         
-        // 题1：双方向冲四
-        puzzles.push({
-            id: 'vcf-level2-001',
-            level: 2,
-            title: '初级第1题：十字冲四',
-            description: '先横向冲四，再纵向冲四获胜',
-            initialBoard: this.createBoardFromPieces([
-                [6,7,1], [7,7,1], [8,7,1],  // 横三连
-                [7,6,1], [7,8,1],            // 纵两子
-                [6,6,2], [8,8,2], [9,7,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '十字']
-        });
-        
-        // 题2：斜横组合
-        puzzles.push({
-            id: 'vcf-level2-002',
-            level: 2,
-            title: '初级第2题：斜横组合',
-            description: '斜线冲四后，横向再冲四',
-            initialBoard: this.createBoardFromPieces([
-                [6,6,1], [7,7,1], [8,8,1],  // 斜三连
-                [8,7,1], [9,7,1],            // 横两子
-                [7,6,2], [7,8,2], [10,7,2]  // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '斜横']
-        });
-        
-        // 题3：连续跳冲
-        puzzles.push({
-            id: 'vcf-level2-003',
-            level: 2,
-            title: '初级第3题：连续跳冲',
-            description: '填补跳三，形成连续冲四',
-            initialBoard: this.createBoardFromPieces([
-                [5,7,1], [7,7,1], [9,7,1],  // 黑棋跳三（两个间隔）
-                [6,7,1],                     // 中间一子
-                [6,6,2], [7,6,2], [8,8,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '跳冲']
-        });
-        
-        // 题4：三角阵型
-        puzzles.push({
-            id: 'vcf-level2-004',
-            level: 2,
-            title: '初级第4题：三角阵型',
-            description: '三角形布局，制造多点威胁',
-            initialBoard: this.createBoardFromPieces([
-                [6,6,1], [7,7,1], [8,6,1],  // 三角顶点
-                [7,6,1],                     // 三角中心
-                [6,7,2], [8,7,2], [7,8,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '三角']
-        });
-        
-        // 题5：梯形进攻
-        puzzles.push({
-            id: 'vcf-level2-005',
-            level: 2,
-            title: '初级第5题：梯形进攻',
-            description: '梯形布局，逐步压缩空间',
-            initialBoard: this.createBoardFromPieces([
-                [6,6,1], [7,6,1], [8,6,1],  // 上边三子
-                [6,7,1], [8,7,1],            // 中间两子
-                [7,7,2], [7,8,2], [9,6,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '梯形']
-        });
-        
-        // 题6：对角连环
-        puzzles.push({
-            id: 'vcf-level2-006',
-            level: 2,
-            title: '初级第6题：对角连环',
-            description: '两条对角线互相配合',
-            initialBoard: this.createBoardFromPieces([
-                [5,5,1], [6,6,1], [7,7,1],  // 主对角
-                [9,5,1], [8,6,1],            // 副对角
-                [7,6,2], [6,7,2], [8,7,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '对角']
-        });
-        
-        // 题7：扇形展开
-        puzzles.push({
-            id: 'vcf-level2-007',
-            level: 2,
-            title: '初级第7题：扇形展开',
-            description: '从一点向外扇形扩展',
-            initialBoard: this.createBoardFromPieces([
-                [7,7,1],                     // 中心点
-                [6,6,1], [7,6,1], [8,6,1],  // 上方三子
-                [6,8,1],                     // 左下一子
-                [7,8,2], [8,8,2], [9,7,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '扇形']
-        });
-        
-        // 题8：L型攻击
-        puzzles.push({
-            id: 'vcf-level2-008',
-            level: 2,
-            title: '初级第8题：L型攻击',
-            description: 'L型布局，转角突破',
-            initialBoard: this.createBoardFromPieces([
-                [6,6,1], [7,6,1], [8,6,1],  // 横向三子
-                [6,7,1], [6,8,1],            // 纵向两子
-                [7,7,2], [7,8,2], [8,7,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', 'L型']
-        });
-        
-        // 题9：波浪推进
-        puzzles.push({
-            id: 'vcf-level2-009',
-            level: 2,
-            title: '初级第9题：波浪推进',
-            description: '波浪形布局，起伏进攻',
-            initialBoard: this.createBoardFromPieces([
-                [5,6,1], [6,7,1], [7,6,1], [8,7,1],  // 波浪形
-                [6,6,1],                              // 中间补充
-                [6,8,2], [7,7,2], [8,6,2]            // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '波浪']
-        });
-        
-        // 题10：交叉夹击
-        puzzles.push({
-            id: 'vcf-level2-010',
-            level: 2,
-            title: '初级第10题：交叉夹击',
-            description: '两个方向交叉配合',
-            initialBoard: this.createBoardFromPieces([
-                [6,7,1], [7,7,1], [8,7,1],  // 横向三子
-                [7,6,1], [7,8,1], [7,9,1],  // 纵向三子
-                [6,6,2], [8,8,2], [9,7,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 3,
-            maxMoves: 15,
-            tags: ['初级', '冲四', '交叉']
-        });
-        
-        return puzzles;
+        return this.buildPuzzlesFromTemplates(2, templates);
     }
-    
-    /**
-     * 生成等级3题库（中级）- 经典VCF题型
-     * 特点：需要4-5步连续冲四，复杂的多方向配合
-     */
+
     generateLevel3Puzzles() {
-        const puzzles = [];
+        const templates = [
+            {
+                id: 'vcf-level3-001',
+                title: '中级第1题：米字风暴',
+                description: '中心米字杀型，必须先攻主线再逼次线。',
+                layout: [
+                    [7, 7, 1], [6, 7, 1], [8, 7, 1], [7, 6, 1], [7, 8, 1], [6, 6, 1], [8, 8, 1],
+                    [5, 7, 2], [9, 7, 2], [7, 5, 2], [7, 9, 2], [6, 8, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '米字', '中心']
+            },
+            {
+                id: 'vcf-level3-002',
+                title: '中级第2题：双杀凌空',
+                description: '空中双杀，需要左右同时威胁迫使白棋就范。',
+                layout: [
+                    [9, 4, 1], [10, 5, 1], [11, 6, 1], [8, 5, 1], [10, 4, 1],
+                    [9, 6, 2], [10, 6, 2], [11, 5, 2], [12, 7, 2], [9, 3, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '双杀', '腾空']
+            },
+            {
+                id: 'vcf-level3-003',
+                title: '中级第3题：逆风凤凰',
+                description: '逆势斜线，黑棋要借助肩冲完成连续冲四。',
+                layout: [
+                    [4, 11, 1], [5, 10, 1], [6, 9, 1], [7, 8, 1], [6, 11, 1],
+                    [5, 11, 2], [6, 10, 2], [7, 9, 2], [8, 8, 2], [4, 9, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '凤凰', '斜冲']
+            },
+            {
+                id: 'vcf-level3-004',
+                title: '中级第4题：河口连环',
+                description: '河口包围后，利用中腹两点形成连环杀。',
+                layout: [
+                    [10, 12, 1], [11, 12, 1], [12, 12, 1], [11, 11, 1], [10, 13, 1], [12, 11, 1],
+                    [9, 12, 2], [13, 12, 2], [11, 10, 2], [12, 13, 2], [11, 13, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '连环', '边角']
+            },
+            {
+                id: 'vcf-level3-005',
+                title: '中级第5题：蛇形追击',
+                description: '蛇形推进，关键在于打通折返节点。',
+                layout: [
+                    [2, 6, 1], [3, 7, 1], [4, 8, 1], [5, 7, 1], [3, 5, 1],
+                    [1, 6, 2], [4, 7, 2], [5, 8, 2], [2, 8, 2], [4, 6, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '蛇形', '折返']
+            },
+            {
+                id: 'vcf-level3-006',
+                title: '中级第6题：破云角挂',
+                description: '角部复杂阵，需利用挂角点连续冲杀。',
+                layout: [
+                    [1, 13, 1], [2, 12, 1], [3, 11, 1], [2, 13, 1], [3, 13, 1],
+                    [0, 12, 2], [2, 11, 2], [3, 12, 2], [4, 11, 2], [1, 11, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '角挂', 'VCF']
+            },
+            {
+                id: 'vcf-level3-007',
+                title: '中级第7题：蝶翼定式',
+                description: '蝶翼展开后，黑棋能同时威胁横竖两线。',
+                layout: [
+                    [9, 8, 1], [10, 8, 1], [11, 8, 1], [10, 7, 1], [9, 9, 1], [11, 9, 1],
+                    [8, 8, 2], [12, 8, 2], [10, 6, 2], [10, 9, 2], [11, 7, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '蝶翼', '双线']
+            },
+            {
+                id: 'vcf-level3-008',
+                title: '中级第8题：灵犀双链',
+                description: '双链布局，先手补在交点就能开始VCF。',
+                layout: [
+                    [6, 3, 1], [7, 3, 1], [8, 3, 1], [7, 2, 1], [6, 4, 1], [7, 4, 1],
+                    [5, 3, 2], [9, 3, 2], [7, 1, 2], [8, 4, 2], [6, 2, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '双链', '交点']
+            },
+            {
+                id: 'vcf-level3-009',
+                title: '中级第9题：江湖借位',
+                description: '借助中腹借位，黑棋轻点即可双向冲四。',
+                layout: [
+                    [12, 4, 1], [12, 5, 1], [12, 6, 1], [11, 5, 1], [13, 5, 1],
+                    [10, 5, 2], [11, 4, 2], [13, 4, 2], [12, 7, 2], [13, 6, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '借位', '中腹']
+            },
+            {
+                id: 'vcf-level3-010',
+                title: '中级第10题：雷霆封锁',
+                description: '雷霆封锁，注意用中轴点把白棋钉死。',
+                layout: [
+                    [4, 2, 1], [5, 2, 1], [6, 2, 1], [5, 1, 1], [5, 3, 1], [6, 3, 1],
+                    [3, 2, 2], [7, 2, 2], [5, 0, 2], [6, 1, 2], [4, 3, 2]
+                ],
+                minMoves: 4,
+                maxMoves: 16,
+                tags: ['中级', '封锁', '中轴']
+            }
+        ];
         
-        // 题1：米字型攻击
-        puzzles.push({
-            id: 'vcf-level3-001',
-            level: 3,
-            title: '中级第1题：米字攻击',
-            description: '八个方向全面威胁',
-            initialBoard: this.createBoardFromPieces([
-                [7,7,1],                              // 中心
-                [6,6,1], [8,8,1], [6,8,1], [8,6,1],  // 四个角
-                [7,6,1], [7,8,1], [6,7,1], [8,7,1],  // 四个边
-                [7,5,2], [5,7,2], [9,7,2], [7,9,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '米字']
-        });
-        
-        // 题2：螺旋推进
-        puzzles.push({
-            id: 'vcf-level3-002',
-            level: 3,
-            title: '中级第2题：螺旋推进',
-            description: '螺旋式收缩空间',
-            initialBoard: this.createBoardFromPieces([
-                [5,5,1], [6,5,1], [7,5,1],           // 上边
-                [7,6,1], [7,7,1],                     // 右边
-                [6,7,1], [5,7,1],                     // 下边
-                [5,6,1],                              // 左边（螺旋）
-                [6,6,2], [8,5,2], [7,8,2], [4,6,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '螺旋']
-        });
-        
-        // 题3：双对角交汇
-        puzzles.push({
-            id: 'vcf-level3-003',
-            level: 3,
-            title: '中级第3题：双对角交汇',
-            description: '两条对角线在中心交汇',
-            initialBoard: this.createBoardFromPieces([
-                [4,4,1], [5,5,1], [6,6,1], [7,7,1],  // 主对角
-                [10,4,1], [9,5,1], [8,6,1],          // 副对角
-                [7,6,1],                              // 交汇点附近
-                [6,5,2], [7,5,2], [8,7,2], [8,5,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '交汇']
-        });
-        
-        // 题4：环形包围
-        puzzles.push({
-            id: 'vcf-level3-004',
-            level: 3,
-            title: '中级第4题：环形包围',
-            description: '形成环形包围圈',
-            initialBoard: this.createBoardFromPieces([
-                [6,6,1], [7,6,1], [8,6,1],           // 上
-                [8,7,1], [8,8,1],                     // 右
-                [7,8,1], [6,8,1],                     // 下
-                [6,7,1],                              // 左（环形）
-                [7,7,2], [9,6,2], [9,8,2], [5,7,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '环形']
-        });
-        
-        // 题5：三线交叉
-        puzzles.push({
-            id: 'vcf-level3-005',
-            level: 3,
-            title: '中级第5题：三线交叉',
-            description: '三条线在一点交汇',
-            initialBoard: this.createBoardFromPieces([
-                [5,7,1], [6,7,1], [7,7,1],           // 横线
-                [7,5,1], [7,6,1],                     // 纵线（上）
-                [7,8,1],                              // 纵线（下）
-                [5,5,1], [6,6,1],                     // 斜线
-                [8,7,2], [7,9,2], [8,8,2], [6,8,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '三线']
-        });
-        
-        // 题6：锯齿进攻
-        puzzles.push({
-            id: 'vcf-level3-006',
-            level: 3,
-            title: '中级第6题：锯齿进攻',
-            description: '锯齿形布局，反复威胁',
-            initialBoard: this.createBoardFromPieces([
-                [5,6,1], [6,7,1], [7,6,1], [8,7,1], [9,6,1], // 锯齿形
-                [6,6,1], [8,6,1],                             // 补充
-                [6,8,2], [7,7,2], [8,8,2], [9,7,2]           // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '锯齿']
-        });
-        
-        // 题7：梯田式
-        puzzles.push({
-            id: 'vcf-level3-007',
-            level: 3,
-            title: '中级第7题：梯田式',
-            description: '阶梯状布局，层层推进',
-            initialBoard: this.createBoardFromPieces([
-                [5,5,1], [6,5,1], [7,5,1],           // 第一层
-                [6,6,1], [7,6,1], [8,6,1],           // 第二层
-                [7,7,1], [8,7,1],                     // 第三层
-                [6,7,2], [8,8,2], [9,6,2], [7,8,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '梯田']
-        });
-        
-        // 题8：放射状
-        puzzles.push({
-            id: 'vcf-level3-008',
-            level: 3,
-            title: '中级第8题：放射状',
-            description: '从中心向外放射',
-            initialBoard: this.createBoardFromPieces([
-                [7,7,1],                              // 中心
-                [6,6,1], [7,6,1], [8,6,1],           // 上方
-                [8,7,1], [8,8,1],                     // 右下
-                [6,7,1], [6,8,1],                     // 左下
-                [7,8,2], [9,6,2], [9,8,2], [5,7,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '放射']
-        });
-        
-        // 题9：双翼齐飞
-        puzzles.push({
-            id: 'vcf-level3-009',
-            level: 3,
-            title: '中级第9题：双翼齐飞',
-            description: '两翼同时进攻',
-            initialBoard: this.createBoardFromPieces([
-                [7,7,1],                              // 中心
-                [5,6,1], [6,6,1], [7,6,1],           // 左翼
-                [8,6,1], [9,6,1],                     // 右翼
-                [6,8,1], [8,8,1],                     // 下方支援
-                [7,8,2], [7,5,2], [10,6,2], [4,6,2]  // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '双翼']
-        });
-        
-        // 题10：迷宫布局
-        puzzles.push({
-            id: 'vcf-level3-010',
-            level: 3,
-            title: '中级第10题：迷宫布局',
-            description: '复杂的迷宫式路径',
-            initialBoard: this.createBoardFromPieces([
-                [6,5,1], [7,5,1], [8,5,1],           // 顶部
-                [6,7,1], [7,7,1], [8,7,1],           // 中部
-                [7,6,1], [7,8,1],                     // 连接
-                [6,6,2], [8,6,2], [6,8,2], [8,8,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 5,
-            maxMoves: 20,
-            tags: ['中级', '冲四', '迷宫']
-        });
-        
-        return puzzles;
+        return this.buildPuzzlesFromTemplates(3, templates);
     }
-    
-    /**
-     * 生成等级4题库（高级）- 经典VCF题型
-     * 特点：需要6步以上连续冲四，大师级难度
-     */
+
     generateLevel4Puzzles() {
-        const puzzles = [];
+        const templates = [
+            {
+                id: 'vcf-level4-001',
+                title: '高级第1题：星河锁喉',
+                description: '星位全线压制，利用喉位点完成终局冲四。',
+                layout: [
+                    [7, 7, 1], [8, 7, 1], [9, 7, 1], [8, 6, 1], [8, 8, 1], [9, 6, 1], [7, 8, 1],
+                    [6, 7, 2], [10, 7, 2], [8, 5, 2], [8, 9, 2], [9, 8, 2], [7, 6, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '锁喉', '星位']
+            },
+            {
+                id: 'vcf-level4-002',
+                title: '高级第2题：龙鳞回环',
+                description: '龙鳞回环阵，需连续两步建立不可防守的四。',
+                layout: [
+                    [3, 12, 1], [4, 11, 1], [5, 10, 1], [6, 9, 1], [4, 12, 1], [5, 11, 1],
+                    [2, 12, 2], [5, 12, 2], [6, 10, 2], [7, 9, 2], [3, 10, 2], [4, 9, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '回环', '斜线']
+            },
+            {
+                id: 'vcf-level4-003',
+                title: '高级第3题：风眼点杀',
+                description: '风眼位置是关键，抢占后即可连环冲四。',
+                layout: [
+                    [11, 3, 1], [11, 4, 1], [11, 5, 1], [10, 4, 1], [12, 4, 1], [10, 5, 1],
+                    [9, 4, 2], [13, 4, 2], [11, 2, 2], [12, 5, 2], [10, 3, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '风眼', '点杀']
+            },
+            {
+                id: 'vcf-level4-004',
+                title: '高级第4题：海底捞月',
+                description: '底线长连题，利用月点制造双活四。',
+                layout: [
+                    [5, 13, 1], [6, 13, 1], [7, 13, 1], [6, 12, 1], [5, 12, 1], [7, 12, 1],
+                    [4, 13, 2], [8, 13, 2], [6, 14, 2], [6, 11, 2], [5, 11, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '底线', '双活四']
+            },
+            {
+                id: 'vcf-level4-005',
+                title: '高级第5题：落霞三连',
+                description: '落霞阵势，黑棋需要同时顾及横向与对角冲。',
+                layout: [
+                    [9, 10, 1], [10, 10, 1], [11, 10, 1], [10, 9, 1], [10, 11, 1], [11, 9, 1],
+                    [8, 10, 2], [12, 10, 2], [10, 8, 2], [10, 12, 2], [11, 11, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '落霞', '多线']
+            },
+            {
+                id: 'vcf-level4-006',
+                title: '高级第6题：凌波微步',
+                description: '复杂小斜杀型，先点上腰眼形成连续冲四。',
+                layout: [
+                    [2, 4, 1], [3, 5, 1], [4, 6, 1], [5, 5, 1], [3, 3, 1], [4, 4, 1],
+                    [1, 4, 2], [4, 5, 2], [5, 6, 2], [2, 6, 2], [4, 3, 2], [5, 4, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '凌波', '小斜']
+            },
+            {
+                id: 'vcf-level4-007',
+                title: '高级第7题：天元飞瀑',
+                description: '天元附近的瀑布杀，黑棋要用垂直连冲。',
+                layout: [
+                    [7, 7, 1], [7, 8, 1], [7, 9, 1], [8, 8, 1], [6, 8, 1], [8, 9, 1],
+                    [7, 6, 2], [7, 10, 2], [9, 8, 2], [6, 9, 2], [8, 7, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '天元', '垂直']
+            },
+            {
+                id: 'vcf-level4-008',
+                title: '高级第8题：破晓双雄',
+                description: '双雄并进，黑棋要利用肩点一举定胜。',
+                layout: [
+                    [13, 8, 1], [12, 8, 1], [11, 8, 1], [12, 7, 1], [12, 9, 1], [11, 9, 1],
+                    [10, 8, 2], [14, 8, 2], [12, 6, 2], [12, 10, 2], [13, 9, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '双雄', '肩点']
+            },
+            {
+                id: 'vcf-level4-009',
+                title: '高级第9题：幻影分岔',
+                description: '分岔连环杀，关键在于站稳中央交点。',
+                layout: [
+                    [3, 7, 1], [4, 7, 1], [5, 7, 1], [4, 6, 1], [4, 8, 1], [5, 6, 1], [3, 8, 1],
+                    [2, 7, 2], [6, 7, 2], [4, 5, 2], [4, 9, 2], [5, 8, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '分岔', '连环']
+            },
+            {
+                id: 'vcf-level4-010',
+                title: '高级第10题：终幕天锁',
+                description: '终幕锁喉题，连续冲四必须一步不差。',
+                layout: [
+                    [9, 2, 1], [10, 3, 1], [11, 4, 1], [12, 5, 1], [10, 1, 1], [11, 2, 1],
+                    [8, 1, 2], [9, 3, 2], [11, 5, 2], [12, 4, 2], [13, 6, 2], [10, 2, 2]
+                ],
+                minMoves: 5,
+                maxMoves: 18,
+                tags: ['高级', '终幕', '锁喉']
+            }
+        ];
         
-        // 题1：大师级十字
-        puzzles.push({
-            id: 'vcf-level4-001',
-            level: 4,
-            title: '高级第1题：大师十字',
-            description: '超大范围的十字攻击',
-            initialBoard: this.createBoardFromPieces([
-                [7,7,1],                              // 中心
-                [4,7,1], [5,7,1], [6,7,1], [8,7,1], [9,7,1], [10,7,1],  // 横向
-                [7,4,1], [7,5,1], [7,6,1], [7,8,1], [7,9,1],            // 纵向
-                [6,6,2], [8,8,2], [6,8,2], [8,6,2], [7,10,2]            // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '大师']
-        });
-        
-        // 题2：全盘控制
-        puzzles.push({
-            id: 'vcf-level4-002',
-            level: 4,
-            title: '高级第2题：全盘控制',
-            description: '控制整个棋盘的局面',
-            initialBoard: this.createBoardFromPieces([
-                [3,3,1], [4,4,1], [5,5,1], [6,6,1], [7,7,1],  // 主对角
-                [11,3,1], [10,4,1], [9,5,1], [8,6,1],         // 副对角
-                [7,5,1], [7,6,1],                              // 中心纵向
-                [5,7,1], [6,7,1],                              // 中心横向
-                [6,5,2], [8,7,2], [7,8,2], [8,5,2], [9,6,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '全盘']
-        });
-        
-        // 题3：龙形阵
-        puzzles.push({
-            id: 'vcf-level4-003',
-            level: 4,
-            title: '高级第3题：龙形阵',
-            description: '龙形盘旋，步步紧逼',
-            initialBoard: this.createBoardFromPieces([
-                [4,5,1], [5,5,1], [6,5,1], [7,5,1],  // 龙头
-                [7,6,1], [7,7,1], [8,7,1], [9,7,1],  // 龙身
-                [9,8,1], [8,8,1],                     // 龙尾
-                [6,6,2], [8,6,2], [9,6,2], [7,8,2], [10,7,2]  // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '龙形']
-        });
-        
-        // 题4：八卦阵
-        puzzles.push({
-            id: 'vcf-level4-004',
-            level: 4,
-            title: '高级第4题：八卦阵',
-            description: '八个方位全面布局',
-            initialBoard: this.createBoardFromPieces([
-                [7,7,1],                              // 中心
-                [7,4,1], [7,5,1],                     // 北
-                [10,7,1], [9,7,1],                    // 东
-                [7,10,1], [7,9,1],                    // 南
-                [4,7,1], [5,7,1],                     // 西
-                [9,5,1], [9,9,1], [5,9,1], [5,5,1],  // 四个角
-                [7,6,2], [8,7,2], [7,8,2], [6,7,2], [8,8,2]  // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '八卦']
-        });
-        
-        // 题5：双龙出海
-        puzzles.push({
-            id: 'vcf-level4-005',
-            level: 4,
-            title: '高级第5题：双龙出海',
-            description: '两条龙形同时进攻',
-            initialBoard: this.createBoardFromPieces([
-                [4,4,1], [5,5,1], [6,6,1], [7,7,1], [8,8,1],  // 龙1
-                [10,4,1], [9,5,1], [8,6,1], [7,7,1], [6,8,1], // 龙2（共享中心）
-                [6,7,1], [8,7,1],                              // 支援
-                [7,6,2], [7,8,2], [9,6,2], [5,6,2], [6,9,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '双龙']
-        });
-        
-        // 题6：星罗棋布
-        puzzles.push({
-            id: 'vcf-level4-006',
-            level: 4,
-            title: '高级第6题：星罗棋布',
-            description: '星星点点，遍布全盘',
-            initialBoard: this.createBoardFromPieces([
-                [3,3,1], [7,3,1], [11,3,1],          // 上排
-                [5,5,1], [7,5,1], [9,5,1],           // 中上排
-                [3,7,1], [7,7,1], [11,7,1],          // 中间排
-                [5,9,1], [9,9,1],                     // 中下排
-                [4,4,2], [8,4,2], [6,6,2], [8,6,2], [6,8,2]  // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '星罗']
-        });
-        
-        // 题7：层层递进
-        puzzles.push({
-            id: 'vcf-level4-007',
-            level: 4,
-            title: '高级第7题：层层递进',
-            description: '五层阶梯，逐步推进',
-            initialBoard: this.createBoardFromPieces([
-                [7,3,1],                              // 第1层
-                [6,4,1], [7,4,1], [8,4,1],           // 第2层
-                [6,5,1], [7,5,1], [8,5,1],           // 第3层
-                [7,6,1], [7,7,1],                     // 第4、5层
-                [6,6,2], [8,6,2], [7,8,2], [8,5,2], [6,7,2]  // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '递进']
-        });
-        
-        // 题8：凤凰展翅
-        puzzles.push({
-            id: 'vcf-level4-008',
-            level: 4,
-            title: '高级第8题：凤凰展翅',
-            description: '凤凰展翅，双翼合围',
-            initialBoard: this.createBoardFromPieces([
-                [7,5,1],                              // 头部
-                [5,6,1], [6,6,1], [7,6,1], [8,6,1], [9,6,1],  // 身体
-                [4,7,1], [5,7,1],                     // 左翼
-                [9,7,1], [10,7,1],                    // 右翼
-                [6,8,1], [8,8,1],                     // 尾部
-                [7,7,2], [7,8,2], [6,7,2], [8,7,2], [7,9,2]  // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '凤凰']
-        });
-        
-        // 题9：蛛网陷阱
-        puzzles.push({
-            id: 'vcf-level4-009',
-            level: 4,
-            title: '高级第9题：蛛网陷阱',
-            description: '蛛网状布局，无处可逃',
-            initialBoard: this.createBoardFromPieces([
-                [7,7,1],                              // 中心
-                [5,5,1], [6,5,1], [7,5,1], [8,5,1], [9,5,1],  // 外圈上
-                [9,6,1], [9,7,1], [9,8,1], [9,9,1],           // 外圈右
-                [5,6,1], [5,7,1], [5,8,1], [5,9,1],           // 外圈左
-                [6,6,2], [8,6,2], [7,6,2], [7,8,2], [8,8,2]   // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 7,
-            maxMoves: 30,
-            tags: ['高级', '冲四', '蛛网']
-        });
-        
-        // 题10：终极挑战
-        puzzles.push({
-            id: 'vcf-level4-010',
-            level: 4,
-            title: '高级第10题：终极挑战',
-            description: '最复杂的VCF序列，终极挑战',
-            initialBoard: this.createBoardFromPieces([
-                [3,7,1], [4,7,1], [5,7,1], [6,7,1], [7,7,1], [8,7,1], [9,7,1],  // 横向长链
-                [7,3,1], [7,4,1], [7,5,1], [7,6,1], [7,8,1], [7,9,1],           // 纵向长链
-                [4,4,1], [5,5,1], [6,6,1],                                       // 斜向支援1
-                [10,4,1], [9,5,1], [8,6,1],                                      // 斜向支援2
-                [6,5,2], [8,5,2], [6,8,2], [8,8,2], [7,10,2], [10,7,2]          // 白棋防守
-            ]),
-            currentPlayer: 1,
-            minMoves: 9,
-            maxMoves: 35,
-            tags: ['高级', '冲四', '终极']
-        });
-        
-        return puzzles;
+        return this.buildPuzzlesFromTemplates(4, templates);
     }
-    
+
+    /**
+     * 根据模板生成练习题
+     */
+    buildPuzzlesFromTemplates(level, templates) {
+        return templates.map(template => ({
+            id: template.id,
+            level,
+            title: template.title,
+            description: template.description,
+            initialBoard: this.createBoardFromPieces(template.layout || []),
+            currentPlayer: template.currentPlayer || 1,
+            minMoves: template.minMoves || 1,
+            maxMoves: template.maxMoves || 10,
+            tags: template.tags || []
+        }));
+    }
+
     /**
      * 从棋子列表创建棋盘
      * @param {Array} pieces - 棋子列表 [[x, y, player], ...]
@@ -1029,7 +818,7 @@ class VCFPracticeManager {
 // 模块信息
 const VCF_PRACTICE_MODULE_INFO = {
     name: 'VCFPracticeManager',
-    version: '3.0.0',
+    version: '3.1.0',
     author: '项目团队',
     dependencies: []
 };
@@ -1040,7 +829,7 @@ if (typeof window !== 'undefined') {
         __moduleInfo: VCF_PRACTICE_MODULE_INFO 
     });
     
-    console.log('[VCFPractice] VCF练习模块v3.0已加载');
+    console.log('[VCFPractice] VCF练习模块v3.1已加载');
     
     if (typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new CustomEvent('moduleLoaded', {

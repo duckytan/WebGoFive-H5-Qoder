@@ -225,12 +225,8 @@ class InterfaceDemo {
         // 模态框关闭按钮
         this.setupModalListeners();
         
-        // 棋盘点击事件
-        const canvas = document.getElementById('game-canvas');
-        if (canvas) {
-            canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
-            canvas.addEventListener('mousemove', (e) => this.handleCanvasHover(e));
-        }
+        // 棋盘点击事件由 board-renderer.js 处理
+        // board-renderer 会调用 handleVCFPracticeMove 或 handleMoveResult
         
         // 键盘快捷键
         document.addEventListener('keydown', (e) => this.handleKeydown(e));
@@ -634,7 +630,7 @@ class InterfaceDemo {
         if (descEl) descEl.textContent = puzzle.description;
         if (progressEl) {
             const levelProgress = stats.levelProgress[puzzle.level - 1] || 0;
-            const levelTotal = 50;
+            const levelTotal = stats.levelTotals?.[puzzle.level - 1] || 10;
             progressEl.textContent = `等级${puzzle.level} · 已完成${levelProgress}/${levelTotal}题 · 连胜${stats.currentStreak}题`;
         }
         if (hintEl) {
