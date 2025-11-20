@@ -1570,8 +1570,11 @@ class InterfaceDemo {
                 gameModeDisplay.textContent = `机机对战 (黑:${blackLabel} vs 白:${whiteLabel})`;
             } else if (this.gameMode === 'VCF_PRACTICE' && this.practiceState.active && this.practiceState.currentPuzzle) {
                 const puzzle = this.practiceState.currentPuzzle;
-                const progress = this.practiceManager?.getProgress() || { current: 0, total: 0 };
-                gameModeDisplay.textContent = `冲四练习 (${puzzle.difficulty} · ${progress.current}/${progress.total}步)`;
+                const difficultyName = this.practiceManager?.getLevelName(puzzle.level) || '未知';
+                const currentSteps = this.practiceState.playerMoves || 0;
+                const totalSteps = puzzle.maxMoves || puzzle.minMoves || 1;
+                const clampedSteps = Math.min(currentSteps, totalSteps);
+                gameModeDisplay.textContent = `冲四练习 (${difficultyName} · ${clampedSteps}/${totalSteps}步)`;
             } else if (this.gameMode === 'VCF_PRACTICE') {
                 gameModeDisplay.textContent = '冲四练习（VCF）';
             } else {
