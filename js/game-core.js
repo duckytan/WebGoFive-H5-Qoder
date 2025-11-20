@@ -1003,8 +1003,8 @@ class GomokuGame {
             return vcfMove;
         }
         
-        // 4. 检测对手的VCF威胁
-        const vcfDefense = this.findVCFMove(opponentPlayer, true);
+        // 4. 增强VCF防守：检测对手所有候选落点是否形成VCF威胁
+        const vcfDefense = this.findVCFDefenseMove(opponentPlayer);
         if (vcfDefense) {
             console.log(`[GameCore AI-HELL] 阻止对手VCF: (${vcfDefense.x}, ${vcfDefense.y})`);
             return vcfDefense;
@@ -1017,7 +1017,14 @@ class GomokuGame {
             return urgentDefense;
         }
         
-        // 6. 使用Alpha-Beta剪枝搜索（深度3）
+        // 6. 防守对手活三威胁
+        const openThreeDefense = this.findOpenThreeDefense(opponentPlayer);
+        if (openThreeDefense) {
+            console.log(`[GameCore AI-HELL] 防守对手活三: (${openThreeDefense.x}, ${openThreeDefense.y})`);
+            return openThreeDefense;
+        }
+        
+        // 7. 使用Alpha-Beta剪枝搜索（深度3）
         const bestMove = this.alphaBetaSearch(aiPlayer, opponentPlayer, 3);
         if (bestMove) {
             console.log(`[GameCore AI-HELL] Alpha-Beta最佳落点: (${bestMove.x}, ${bestMove.y}), 评分: ${bestMove.score}`);
@@ -1921,6 +1928,118 @@ class GomokuGame {
             if (hasDoubleThreat || (opponent === 2 && hasDoubleThree)) {
                 return {x, y};
             }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 增强VCF防守：检测对手候选落点是否形成VCF威胁
+     * 这个方法会扫描对手的所有高价值候选落点，如果发现VCF威胁就进行防守
+     */
+    findVCFDefenseMove(opponent) {
+        const defender = this.currentPlayer;
+        
+        // 先尝试使用原有VCF防守逻辑，快速挡住已经存在的冲四
+        const immediateDefense = this.findVCFMove(opponent, true);
+        if (immediateDefense) {
+            return immediateDefense;
+        }
+        
+        const candidates = this.getCandidateMoves(3, opponent);
+        const scoredCandidates = [];
+        
+        // 评估每个候选点的威胁等级
+        for (const {x, y} of candidates) {
+            if (this.board[y][x] !== 0) {
+                continue;
+            }
+            if (this.isForbiddenMoveForPlayer(opponent, x, y)) {
+                continue;
+            }
+            
+            this.board[y][x] = opponent;
+            
+            let threatLevel = 0;
+            for (const {dx, dy} of this.aiDirections) {
+                const line = this.getLine(x, y, dx, dy, opponent);
+                if (line.length >= 4) {
+                    threatLevel += 120; // 直接四连
+                } else if (line.length === 3) {
+                    const space = this.checkLineSpace(x, y, dx, dy, opponent, 3);
+                    if (space.both) {
+                        threatLevel += 60; // 活三
+                    } else if (space.one) {
+                        threatLevel += 25; // 眠三
+                    }
+                }
+            }
+            
+            this.board[y][x] = 0;
+            scoredCandidates.push({x, y, threatLevel});
+        }
+        
+        scoredCandidates.sort((a, b) => b.threatLevel - a.threatLevel);
+        const checkLimit = Math.min(12, scoredCandidates.length);
+        
+        for (let i = 0; i < checkLimit; i++) {
+            const {x, y} = scoredCandidates[i];
+            if (this.isForbiddenMoveForPlayer(defender, x, y)) {
+                continue;
+            }
+            
+            this.board[y][x] = opponent;
+            const hasVCF = this.checkVCFSequence(opponent, defender, 4);
+            this.board[y][x] = 0;
+            
+            if (hasVCF) {
+                return {x, y};
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 防守对手的活三威胁
+     * 在VCF练习中，活三通常是VCF序列的起始点
+     */
+    findOpenThreeDefense(opponent) {
+        const candidates = this.getCandidateMoves(3, opponent);
+        const openThrees = [];
+        
+        for (const {x, y} of candidates) {
+            if (this.board[y][x] !== 0) {
+                continue;
+            }
+            if (this.isForbiddenMoveForPlayer(opponent, x, y)) {
+                continue;
+            }
+            if (this.isForbiddenMoveForPlayer(this.currentPlayer, x, y)) {
+                continue;
+            }
+            
+            this.board[y][x] = opponent;
+            
+            let openThreeCount = 0;
+            for (const {dx, dy} of this.aiDirections) {
+                const pattern = this.analyzeLinePattern(x, y, dx, dy, opponent);
+                if (pattern.type === 'openThree') {
+                    openThreeCount++;
+                }
+            }
+            
+            this.board[y][x] = 0;
+            
+            if (openThreeCount > 0) {
+                openThrees.push({x, y, count: openThreeCount});
+            }
+        }
+        
+        if (openThrees.length > 0) {
+            openThrees.sort((a, b) => b.count - a.count);
+            const target = openThrees[0];
+            return {x: target.x, y: target.y};
         }
         
         return null;
