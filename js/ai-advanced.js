@@ -231,7 +231,7 @@ class AdvancedAI {
         
         for (const {x, y} of candidates) {
             this.game.board[y][x] = player;
-            const isWin = this.game.checkWin(x, y).isWin;
+            const isWin = this.game.checkWin(x, y, true).isWin;
             this.game.board[y][x] = 0;
             
             if (isWin && !this.game.isForbiddenMoveForPlayer(player, x, y)) {
@@ -257,7 +257,7 @@ class AdvancedAI {
             this.game.board[fourMove.y][fourMove.x] = player;
             
             // 检查是否获胜
-            if (this.game.checkWin(fourMove.x, fourMove.y).isWin) {
+            if (this.game.checkWin(fourMove.x, fourMove.y, true).isWin) {
                 this.game.board[fourMove.y][fourMove.x] = 0;
                 return fourMove;
             }

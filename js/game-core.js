@@ -193,9 +193,10 @@ class GomokuGame {
      * 检查胜负
      * @param {number} x - 落子X坐标
      * @param {number} y - 落子Y坐标
+     * @param {boolean} skipLog - 是否跳过日志输出（用于搜索时减少日志）
      * @returns {Object} {isWin: boolean, winLine: Array}
      */
-    checkWin(x, y) {
+    checkWin(x, y, skipLog = false) {
         const player = this.board[y][x];
         
         // 四个方向：横、竖、主对角线、副对角线
@@ -210,7 +211,9 @@ class GomokuGame {
             const line = this.getLine(x, y, dir.dx, dir.dy, player);
             
             if (line.length >= 5) {
-                console.log(`[GameCore] 检测到${dir.name}五连: ${JSON.stringify(line)}`);
+                if (!skipLog) {
+                    console.log(`[GameCore] 检测到${dir.name}五连: ${JSON.stringify(line)}`);
+                }
                 return {
                     isWin: true,
                     winLine: line,
@@ -1101,21 +1104,22 @@ class GomokuGame {
      * 查找能立即获胜的落点
      */
     findWinningMove(player) {
-        for (let y = 0; y < 15; y++) {
-            for (let x = 0; x < 15; x++) {
-                if (this.board[y][x] !== 0) continue;
-                
-                // 临时放置棋子测试
-                this.board[y][x] = player;
-                const winResult = this.checkWin(x, y);
-                this.board[y][x] = 0; // 恢复
-                
-                if (winResult.isWin) {
-                    if (this.isForbiddenMoveForPlayer(player, x, y)) {
-                        continue;
-                    }
-                    return {x, y};
+        // 优化：只检查附近有棋子的位置
+        const candidates = this.getCandidateMoves(2, player);
+        
+        for (const {x, y} of candidates) {
+            if (this.board[y][x] !== 0) continue;
+            
+            // 临时放置棋子测试
+            this.board[y][x] = player;
+            const winResult = this.checkWin(x, y, true);
+            this.board[y][x] = 0; // 恢复
+            
+            if (winResult.isWin) {
+                if (this.isForbiddenMoveForPlayer(player, x, y)) {
+                    continue;
                 }
+                return {x, y};
             }
         }
         return null;
@@ -1586,7 +1590,7 @@ class GomokuGame {
         
         for (const move of topCandidates) {
             this.board[move.y][move.x] = player;
-            const winCheck = this.checkWin(move.x, move.y);
+            const winCheck = this.checkWin(move.x, move.y, true);
             let score;
             if (winCheck.isWin) {
                 score = this.aiScoreTable.five * (depth + 2);
@@ -1641,7 +1645,7 @@ class GomokuGame {
             let value = -Infinity;
             for (const move of scored) {
                 this.board[move.y][move.x] = currentPlayer;
-                const winCheck = this.checkWin(move.x, move.y);
+                const winCheck = this.checkWin(move.x, move.y, true);
                 let score;
                 if (winCheck.isWin) {
                     score = this.aiScoreTable.five * (depth + 1);
@@ -1661,7 +1665,7 @@ class GomokuGame {
             let value = Infinity;
             for (const move of scored) {
                 this.board[move.y][move.x] = currentPlayer;
-                const winCheck = this.checkWin(move.x, move.y);
+                const winCheck = this.checkWin(move.x, move.y, true);
                 let score;
                 if (winCheck.isWin) {
                     score = -this.aiScoreTable.five * (depth + 1);
