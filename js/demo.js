@@ -359,6 +359,30 @@ class InterfaceDemo {
             });
             this.setWhiteAIDifficulty(whiteAIDifficultySelect.value);
         }
+        
+        // AI算法模式选择
+        const aiAlgorithmModeSelect = document.getElementById('ai-algorithm-mode');
+        if (aiAlgorithmModeSelect) {
+            aiAlgorithmModeSelect.addEventListener('change', (e) => {
+                this.setAIAlgorithmMode(e.target.value);
+                this.updateAlgorithmDescription(e.target.value);
+            });
+            const currentMode = window.game?.aiAlgorithmMode || 'CLASSIC';
+            aiAlgorithmModeSelect.value = currentMode;
+            this.updateAlgorithmDescription(currentMode);
+        }
+    }
+    
+    updateAlgorithmDescription(mode) {
+        const descElement = document.querySelector('.algorithm-description .setting-description');
+        if (!descElement) return;
+        
+        const descriptions = {
+            'CLASSIC': '<strong>经典算法：</strong>基于评分表与Alpha-Beta剪枝的平衡策略，思考迅速，适合日常对局。',
+            'ADVANCED': '<strong>深度搜索算法：</strong>采用更深层搜索（5层）、开局库定式、威胁序列分析和VCF搜索，棋力更强但思考时间稍长。'
+        };
+        
+        descElement.innerHTML = descriptions[mode] || descriptions['CLASSIC'];
     }
     
     setAIDifficulty(difficulty) {
@@ -394,6 +418,27 @@ class InterfaceDemo {
         }
     }
     
+    setAIAlgorithmMode(mode) {
+        if (!window.game) {
+            console.warn('[Demo] 游戏核心未加载，无法切换AI算法');
+            return;
+        }
+        
+        const previousMode = window.game.aiAlgorithmMode;
+        window.game.setAIAlgorithmMode(mode);
+        const appliedMode = window.game.aiAlgorithmMode;
+        const modeName = this.getAIAlgorithmLabel(appliedMode);
+        
+        if (appliedMode !== mode) {
+            console.warn('[Demo] AI算法切换失败，已恢复到经典算法');
+        }
+        
+        this.updateHintMessage(`AI算法已切换为: ${modeName}`);
+        this.updateGameStatus();
+        this.updateAlgorithmDescription(appliedMode);
+        console.log(`[Demo] AI算法模式设置为: ${appliedMode}`);
+    }
+    
     getDifficultyLabel(difficulty) {
         const labels = {
             'BEGINNER': '新手',
@@ -402,6 +447,14 @@ class InterfaceDemo {
             'HELL': '地狱'
         };
         return labels[difficulty] || difficulty;
+    }
+    
+    getAIAlgorithmLabel(mode) {
+        const labels = {
+            'CLASSIC': '经典算法',
+            'ADVANCED': '深度搜索算法'
+        };
+        return labels[mode] || '经典算法';
     }
     
     getAIDifficultyForPlayer(player) {
@@ -413,11 +466,13 @@ class InterfaceDemo {
     
     getAIThinkingDuration(difficulty) {
         const level = difficulty || window.game?.aiDifficulty || 'NORMAL';
+        const isAdvanced = window.game?.aiAlgorithmMode === 'ADVANCED';
+        
         const durations = {
-            'BEGINNER': 500,
-            'NORMAL': 900,
-            'HARD': 1400,
-            'HELL': 1800
+            'BEGINNER': isAdvanced ? 600 : 500,
+            'NORMAL': isAdvanced ? 1100 : 900,
+            'HARD': isAdvanced ? 1800 : 1400,
+            'HELL': isAdvanced ? 2400 : 1800
         };
         return durations[level] || 900;
     }
@@ -1558,16 +1613,17 @@ class InterfaceDemo {
         }
         
         if (gameModeDisplay) {
+            const algorithmLabel = this.getAIAlgorithmLabel(window.game?.aiAlgorithmMode || 'CLASSIC');
             if (this.gameMode === 'PvE') {
                 const difficulty = window.game?.aiDifficulty || 'NORMAL';
                 const difficultyLabel = this.getDifficultyLabel(difficulty);
-                gameModeDisplay.textContent = `人机对战 (${difficultyLabel})`;
+                gameModeDisplay.textContent = `人机对战 (${difficultyLabel} · ${algorithmLabel})`;
             } else if (this.gameMode === 'EvE') {
                 const blackDiff = window.game?.blackAIDifficulty || 'NORMAL';
                 const whiteDiff = window.game?.whiteAIDifficulty || 'NORMAL';
                 const blackLabel = this.getDifficultyLabel(blackDiff);
                 const whiteLabel = this.getDifficultyLabel(whiteDiff);
-                gameModeDisplay.textContent = `机机对战 (黑:${blackLabel} vs 白:${whiteLabel})`;
+                gameModeDisplay.textContent = `机机对战 (黑:${blackLabel} vs 白:${whiteLabel} · ${algorithmLabel})`;
             } else if (this.gameMode === 'VCF_PRACTICE' && this.practiceState.active && this.practiceState.currentPuzzle) {
                 const puzzle = this.practiceState.currentPuzzle;
                 const totalSteps = puzzle.maxMoves || 1;

@@ -71,6 +71,12 @@ class GomokuGame {
         this.blackAIDifficulty = 'NORMAL';
         this.whiteAIDifficulty = 'NORMAL';
         
+        // AI算法模式: CLASSIC=经典算法, ADVANCED=深度搜索算法
+        this.aiAlgorithmMode = 'CLASSIC';
+        
+        // 高级AI实例（延迟初始化）
+        this.advancedAI = null;
+        
         console.log('[GameCore] 游戏核心引擎已初始化');
     }
     
@@ -708,6 +714,56 @@ class GomokuGame {
     }
     
     /**
+     * 设置AI算法模式
+     * @param {string} mode - 算法模式：CLASSIC=经典算法, ADVANCED=深度搜索算法
+     */
+    setAIAlgorithmMode(mode) {
+        const validModes = ['CLASSIC', 'ADVANCED'];
+        if (!validModes.includes(mode)) {
+            console.error('[GameCore] 无效的AI算法模式:', mode);
+            return;
+        }
+        
+        this.aiAlgorithmMode = mode;
+        
+        // 初始化高级AI实例
+        if (mode === 'ADVANCED') {
+            const advancedInstance = this.ensureAdvancedAI();
+            if (!advancedInstance) {
+                console.error('[GameCore] 无法启用深度搜索算法，已回退到经典算法');
+                this.aiAlgorithmMode = 'CLASSIC';
+                return;
+            }
+        }
+        
+        console.log(`[GameCore] AI算法模式设置为: ${mode === 'CLASSIC' ? '经典算法' : '深度搜索算法'}`);
+    }
+    
+    /**
+     * 确保高级AI实例已初始化
+     * @returns {AdvancedAI|null}
+     */
+    ensureAdvancedAI() {
+        if (this.advancedAI) {
+            this.advancedAI.game = this;
+            return this.advancedAI;
+        }
+        
+        const AdvancedAIClass = typeof AdvancedAI !== 'undefined'
+            ? AdvancedAI
+            : (typeof window !== 'undefined' ? window.AdvancedAI : null);
+        
+        if (typeof AdvancedAIClass === 'function') {
+            this.advancedAI = new AdvancedAIClass(this);
+            console.log('[GameCore] 深度搜索AI算法已激活');
+            return this.advancedAI;
+        }
+        
+        console.warn('[GameCore] AdvancedAI模块未加载');
+        return null;
+    }
+    
+    /**
      * 获取游戏信息
      * @returns {Object} 游戏信息对象
      */
@@ -725,6 +781,7 @@ class GomokuGame {
             aiDifficulty: this.aiDifficulty,
             blackAIDifficulty: this.blackAIDifficulty,
             whiteAIDifficulty: this.whiteAIDifficulty,
+            aiAlgorithmMode: this.aiAlgorithmMode,
             startTime: this.startTime,
             endTime: this.endTime
         };
@@ -826,9 +883,15 @@ class GomokuGame {
             difficulty = this.currentPlayer === 1 ? this.blackAIDifficulty : this.whiteAIDifficulty;
         }
         
-        console.log(`[GameCore AI] 开始思考，玩家: ${this.currentPlayer === 1 ? '黑方' : '白方'}，难度: ${difficulty}`);
+        const algorithmName = this.aiAlgorithmMode === 'CLASSIC' ? '经典算法' : '深度搜索算法';
+        console.log(`[GameCore AI] 开始思考，玩家: ${this.currentPlayer === 1 ? '黑方' : '白方'}，难度: ${difficulty}，算法: ${algorithmName}`);
         
-        // 根据难度选择策略
+        // 选择AI算法
+        if (this.aiAlgorithmMode === 'ADVANCED' && this.advancedAI) {
+            return this.advancedAI.getMove(difficulty);
+        }
+        
+        // 经典算法：根据难度选择策略
         switch (difficulty) {
             case 'BEGINNER':
                 return this.getAIMoveRandom();

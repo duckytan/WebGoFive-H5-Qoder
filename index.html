@@ -421,6 +421,23 @@
                             </div>
                         </div>
 
+                        <!-- AI算法设置 -->
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">AI算法</h3>
+                            <div class="setting-item">
+                                <label for="ai-algorithm-mode">算法模式:</label>
+                                <select id="ai-algorithm-mode" class="select">
+                                    <option value="CLASSIC" selected>经典算法</option>
+                                    <option value="ADVANCED">深度搜索算法</option>
+                                </select>
+                            </div>
+                            <div class="algorithm-description" id="algorithm-description">
+                                <p class="setting-description">
+                                    <strong>经典算法：</strong>基于评分表与Alpha-Beta剪枝的平衡策略，思考迅速，适合日常对局。
+                                </p>
+                            </div>
+                        </div>
+
                         <!-- 辅助功能设置 -->
                         <div class="setting-group">
                             <h3 class="setting-group-title">智能辅助</h3>
@@ -634,6 +651,8 @@
     <script src="js/utils.js"></script>
     <!-- 核心游戏引擎（必须最先加载） -->
     <script src="js/game-core.js"></script>
+    <!-- AI算法模块 -->
+    <script src="js/ai-advanced.js"></script>
     <!-- 其他模块 -->
     <script src="js/board-renderer.js"></script>
     <script src="js/game-save-load.js"></script>
