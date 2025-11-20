@@ -1257,3 +1257,24 @@ body {
     color: #311b92;
     border: 1px solid #7e57c2;
 }
+
+/* AI算法选择描述 */
+.algorithm-description {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: rgba(139, 69, 19, 0.05);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 6px;
+}
+
+.setting-description {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-light);
+    margin: 0;
+}
+
+.setting-description strong {
+    color: var(--primary-color);
+    font-weight: 600;
+}
