@@ -184,7 +184,8 @@ class AdvancedAI {
             const firstMove = this.game.moves[0];
             if (firstMove.x === 7 && firstMove.y === 7) {
                 const responses = this.openingBook.second[0].responses;
-                return responses[Math.floor(Math.random() * responses.length)];
+                const response = responses[Math.floor(Math.random() * responses.length)];
+                return { x: response[0], y: response[1] };
             }
         }
         
